@@ -2,7 +2,6 @@ import { closeView, graniteEvent } from "@apps-in-toss/web-framework";
 import { useEffect } from "react";
 
 import "./App.css";
-import { BannerAd } from "./components/BannerAd";
 import { BottomNav } from "./components/BottomNav";
 import { HomeScreen } from "./features/home/HomeScreen";
 import { OnboardingScreen } from "./features/onboarding/OnboardingScreen";
@@ -77,7 +76,6 @@ function Shell() {
       <div style={{ flex: 1, minHeight: 0 }}>
         <CurrentScreen />
       </div>
-      {showTabs && <BannerAd slot={route.name} />}
       {showTabs && <BottomNav />}
     </div>
   );

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
+import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import {
   CATEGORIES,
@@ -58,27 +59,30 @@ export function HomeScreen() {
 
   const dateLabel = kstDate().replaceAll("-", ".");
 
-  const unlock = (cat: Category, via: "ad" | "share") => {
+  const unlock = (cat: Category) => {
     unlockDetail(cat);
     markViewed(cat);
-    track(EVENT.detailUnlocked, { category: cat, via });
+    track(EVENT.detailUnlocked, { category: cat, via: "ad" });
     track(EVENT.fortuneViewed, { category: cat });
   };
 
   const onAdUnlock = (cat: Category) => {
     watchThen(() => {
-      unlock(cat, "ad");
+      unlock(cat);
       openToast("상세 운세를 해금했어요!");
     }, `detail_${cat}`);
   };
 
-  const onShareUnlock = async (cat: Category) => {
-    const ok = await shareApp("오늘 내 운세 적중률 도전 중!");
-    if (ok) {
-      track(EVENT.shareCompleted, { context: `unlock_${cat}` });
-      unlock(cat, "share");
-      openToast("공유 완료! 상세 운세를 해금했어요.");
-    }
+  // 공유는 보상형 광고를 본 뒤 실행(공유 여부와 무관하게 광고 수익 확보)
+  const onShareToday = (overallScore: number) => {
+    watchThen(() => {
+      void (async () => {
+        const ok = await shareApp(
+          `오늘의 종합운 ${overallScore}점! 내 운세 적중률 쌓는 중`,
+        );
+        if (ok) track(EVENT.shareCompleted, { context: "today_card" });
+      })();
+    }, "share_today");
   };
 
   const renderDetail = (meta: CategoryMeta) => {
@@ -115,19 +119,11 @@ export function HomeScreen() {
               color={palette.sub}
               style={{ marginTop: 8, lineHeight: 1.5 }}
             >
-              광고를 보거나 공유하면 오늘의 {meta.label} 상세를 볼 수 있어요.
+              짧은 광고를 보면 오늘의 {meta.label} 상세를 볼 수 있어요.
             </Paragraph>
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <Button display="full" size="medium" onClick={() => onAdUnlock(meta.key)}>
+            <div style={{ marginTop: 12 }}>
+              <Button display="full" onClick={() => onAdUnlock(meta.key)}>
                 📺 광고 보고 해금
-              </Button>
-              <Button
-                display="full"
-                size="medium"
-                variant="weak"
-                onClick={() => onShareUnlock(meta.key)}
-              >
-                공유하고 해금
               </Button>
             </div>
           </>
@@ -143,10 +139,13 @@ export function HomeScreen() {
       title={`${profile.nickname ? profile.nickname + "님의 " : ""}오늘의 운세`}
       subtitle={`${dateLabel} · ${profile.zodiacEmoji} ${profile.zodiac} · ${profile.starSignEmoji} ${profile.starSign}`}
     >
+      {/* 화면당 배너 1개 — 최상단 이미지 강조 */}
+      <BannerAd slot="home_top" />
+
       {/* 종합운 (무료, 강조 카드) */}
       <Card
         style={{
-          marginTop: 4,
+          marginTop: 8,
           background: `linear-gradient(135deg, ${palette.primary}, ${palette.primaryDeep})`,
         }}
       >
@@ -167,13 +166,7 @@ export function HomeScreen() {
         >
           {overall.text}
         </Paragraph>
-        <div
-          style={{
-            marginTop: 14,
-            display: "flex",
-            gap: 8,
-          }}
-        >
+        <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
           <Chip label={`행운의 색 ${overall.luckyColor}`} />
           <Chip label={`행운의 숫자 ${overall.luckyNumber}`} />
         </div>
@@ -191,17 +184,8 @@ export function HomeScreen() {
           오늘 확인한 운세가 실제로 맞았는지 O/X로 체크하면 적중률이 쌓여요.
         </Paragraph>
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-          <Button
-            display="full"
-            variant="weak"
-            onClick={async () => {
-              const ok = await shareApp(
-                `오늘의 종합운 ${overall.score}점! 내 운세 적중률 쌓는 중`,
-              );
-              if (ok) track(EVENT.shareCompleted, { context: "today_card" });
-            }}
-          >
-            오늘 운세 공유
+          <Button display="full" variant="weak" onClick={() => onShareToday(overall.score)}>
+            📺 광고 보고 공유
           </Button>
           <Button display="full" onClick={() => navigate({ name: "verify" })}>
             검증하러 가기

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button, Paragraph } from "@toss/tds-mobile";
 
+import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import { CATEGORIES, type Category } from "../../data/fortune";
 import {
@@ -11,6 +12,7 @@ import {
 import { shareApp } from "../../data/share";
 import { EVENT, track } from "../../lib/analytics";
 import { kstMonth } from "../../lib/kst";
+import { useAdGate } from "../../hooks/useAdGate";
 import { useAppState } from "../../state";
 import { palette } from "../../theme";
 
@@ -27,6 +29,7 @@ function rate(hit: number, total: number): number {
 
 export function StatsScreen() {
   const { profile, allChecks, streak } = useAppState();
+  const { watchThen } = useAdGate();
   const [ranking, setRanking] = useState<ZodiacRank[]>([]);
   const [live, setLive] = useState(false);
 
@@ -64,11 +67,16 @@ export function StatsScreen() {
       ? ranking.findIndex((r) => r.zodiac === profile.zodiac) + 1
       : 0;
 
-  const shareMonthly = async () => {
-    const ok = await shareApp(
-      `${month.replace("-", "년 ")}월 내 운세 적중률 ${totalRate}% (${monthChecks.length}회 검증)`,
-    );
-    if (ok) track(EVENT.shareCompleted, { context: "monthly_card" });
+  // 공유는 보상형 광고를 본 뒤 실행(공유 여부와 무관하게 광고 수익 확보)
+  const shareMonthly = () => {
+    watchThen(() => {
+      void (async () => {
+        const ok = await shareApp(
+          `${month.replace("-", "년 ")}월 내 운세 적중률 ${totalRate}% (${monthChecks.length}회 검증)`,
+        );
+        if (ok) track(EVENT.shareCompleted, { context: "monthly_card" });
+      })();
+    }, "share_monthly");
   };
 
   return (
@@ -76,10 +84,13 @@ export function StatsScreen() {
       title="내 적중률 통계"
       subtitle={`${month.replace("-", ".")} 기준`}
     >
+      {/* 화면당 배너 1개 — 최상단 이미지 강조 */}
+      <BannerAd slot="stats_top" />
+
       {/* 이번 달 적중률 (강조) */}
       <Card
         style={{
-          marginTop: 4,
+          marginTop: 8,
           textAlign: "center",
           background: `linear-gradient(135deg, ${palette.primary}, ${palette.primaryDeep})`,
         }}
@@ -194,7 +205,7 @@ export function StatsScreen() {
 
       <div style={{ marginTop: 16 }}>
         <Button display="full" variant="weak" onClick={shareMonthly}>
-          📤 월간 적중률 카드 공유
+          📺 광고 보고 월간 카드 공유
         </Button>
       </div>
     </ScreenLayout>
