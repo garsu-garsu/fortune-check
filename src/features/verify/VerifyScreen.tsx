@@ -8,17 +8,37 @@ import {
   type CategoryMeta,
 } from "../../data/fortune";
 import { EVENT, track } from "../../lib/analytics";
+import { useAdGate } from "../../hooks/useAdGate";
 import { useInterstitialAd } from "../../hooks/useInterstitialAd";
 import { useRouter } from "../../router";
 import { useAppState } from "../../state";
 import { palette } from "../../theme";
 
 export function VerifyScreen() {
-  const { profile, today, isViewed, verdictOf, submitCheck, streak } =
-    useAppState();
+  const {
+    profile,
+    today,
+    isViewed,
+    verdictOf,
+    submitCheck,
+    streak,
+    canSaveStreak,
+    atRiskStreak,
+    saveStreak,
+  } = useAppState();
   const { navigate } = useRouter();
   const { maybeShow } = useInterstitialAd(3);
+  const { watchThen } = useAdGate();
   const { openToast } = useToast();
+
+  // 연속 기록이 끊길 위기 → 광고 보고 어제를 메워 기록 유지(결정적 2nd-chance)
+  const onSaveStreak = () => {
+    watchThen(() => {
+      saveStreak();
+      track(EVENT.streakSaved, { saved_streak: atRiskStreak });
+      openToast(`연속 ${atRiskStreak}일 기록을 지켰어요!`);
+    }, "streak_save");
+  };
 
   if (!profile) return null;
 
@@ -54,6 +74,33 @@ export function VerifyScreen() {
     >
       {/* 화면당 배너 1개 — 최상단 이미지 강조 */}
       <BannerAd slot="verify_top" />
+
+      {/* 연속 기록 끊길 위기 → 광고 보고 지키기 (손실회피 2nd-chance) */}
+      {canSaveStreak && (
+        <Card
+          style={{
+            marginTop: 8,
+            background: `linear-gradient(135deg, ${palette.bad}, #FF7043)`,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 28 }}>⚠️</span>
+            <div style={{ flex: 1 }}>
+              <Paragraph typography="t6" fontWeight="bold" color={palette.white}>
+                연속 {atRiskStreak}일 기록이 끊길 위기예요!
+              </Paragraph>
+              <Paragraph typography="t7" color={palette.white} style={{ opacity: 0.92 }}>
+                어제 검증을 놓쳤어요. 지금 광고를 보면 기록을 이어갈 수 있어요.
+              </Paragraph>
+            </div>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <Button display="full" color="dark" onClick={onSaveStreak}>
+              📺 광고 보고 연속 기록 지키기
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* 스트릭 배너 */}
       <Card

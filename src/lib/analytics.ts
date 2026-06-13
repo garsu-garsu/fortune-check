@@ -41,5 +41,6 @@ export const EVENT = {
   fortuneViewed: "fortune_viewed",
   verifySubmitted: "verify_submitted",
   streakMilestone: "streak_milestone",
+  streakSaved: "streak_saved",
   detailUnlocked: "detail_unlocked",
 } as const;
