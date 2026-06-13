@@ -34,3 +34,9 @@ Thumbs.db
 
 # 크래시 덤프
 *.stackdump
+
+# Supabase 로컬/시크릿
+supabase/.temp/
+supabase/.branches/
+supabase/.db-password
+supabase/.toss-secrets
