@@ -42,7 +42,7 @@ export function ScreenLayout({
         {title != null && (
           <Top
             title={
-              <Top.TitleParagraph size={24} color={palette.ink}>
+              <Top.TitleParagraph size={22} color={palette.ink}>
                 {title}
               </Top.TitleParagraph>
             }

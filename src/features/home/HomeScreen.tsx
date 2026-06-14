@@ -57,7 +57,7 @@ export function HomeScreen() {
 
   if (!profile) return null;
 
-  const dateLabel = kstDate().replaceAll("-", ".");
+  const dateLabel = kstDate().replace(/-/g, ".");
 
   const unlock = (cat: Category) => {
     unlockDetail(cat);

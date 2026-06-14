@@ -99,6 +99,7 @@ export function StatsScreen() {
           이번 달 운세 적중률
         </Paragraph>
         <Paragraph
+          typography="t1"
           fontWeight="bold"
           color={palette.gold}
           style={{ fontSize: 52, lineHeight: 1.1, margin: "6px 0" }}
