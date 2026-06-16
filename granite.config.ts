@@ -5,7 +5,7 @@ export default defineConfig({
   brand: {
     displayName: "운세 팩트체크", // 화면에 노출될 앱의 한글 이름
     primaryColor: "#6C5CE7", // 운세/별자리 무드의 인디고 바이올렛
-    icon: "", // 배포 시 아이콘 이미지 주소
+    icon: "https://static.toss.im/appsintoss/13203/78c0dc73-c0da-4257-9686-7195c044727d.png", // 배포 시 아이콘 이미지 주소
   },
   web: {
     host: "localhost",
