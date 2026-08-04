@@ -11,6 +11,8 @@ import {
   STEMS,
   branchElement,
   climateOf,
+  computeSaju,
+  dayPillarOf,
   currentFortune10,
   fortuneDirectionOf,
   isNobleman,
@@ -302,6 +304,56 @@ function stageWord(stage: string): string {
     양: "자라나는 자리예요. 서두르지 않으면 꾸준히 좋아져요.",
   };
   return map[stage] ?? "";
+}
+
+export interface FlowStep {
+  /** 대운 / 세운 / 월운 / 일운 */
+  label: string;
+  /** 그 기간을 가리키는 말 (예: "2026년", "8월", "오늘") */
+  when: string;
+  pillar: string;
+  god: TenGodFull;
+  /** 나에게 반가운 기운이 오는 시기인지 */
+  good: boolean;
+}
+
+/**
+ * 시간 단위 운의 사다리 — 대운(10년) → 세운(1년) → 월운(1달) → 일운(하루).
+ * 명리에 주(週) 단위는 없어요(60갑자에 7일 주기가 없어서).
+ * 그 날짜의 년주·월주가 곧 그 해의 세운·그 달의 월운이라 computeSaju 를 그대로 써요.
+ */
+export function flowOf(
+  saju: Saju,
+  today: string,
+  current: Fortune10 | null,
+): FlowStep[] {
+  const useful = usefulElementsOfV2(saju);
+  const now = computeSaju(today); // 오늘 기준 년주(세운) · 월주(월운)
+  const dayP = dayPillarOf(today);
+  const month = Number(today.slice(5, 7));
+
+  const step = (
+    label: string,
+    when: string,
+    p: { stem: number; branch: number; name: string },
+  ): FlowStep => ({
+    label,
+    when,
+    pillar: p.name,
+    god: tenGodFullOf(saju.dayStem, p.stem),
+    good:
+      useful.includes(stemElement(p.stem)) ||
+      useful.includes(branchElement(p.branch)),
+  });
+
+  const out: FlowStep[] = [];
+  if (current) {
+    out.push(step("대운", `${current.startAge}세~`, current.pillar));
+  }
+  out.push(step("세운", `${today.slice(0, 4)}년`, now.year));
+  out.push(step("월운", `${month}월`, now.month));
+  out.push(step("일운", "오늘", dayP));
+  return out;
 }
 
 /** 원국 표에 쓸 한 기둥 요약 */

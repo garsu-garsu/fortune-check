@@ -4,7 +4,7 @@ import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
 import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
-import { pillarSummary, readSaju } from "../../data/reading";
+import { flowOf, pillarSummary, readSaju } from "../../data/reading";
 import { computeSaju, type Element, type Gender } from "../../data/saju";
 import { EVENT, track } from "../../lib/analytics";
 import { kstDate } from "../../lib/kst";
@@ -31,6 +31,8 @@ export function SajuScreen() {
     removePerson,
     saveProfile,
     resetAll,
+    isSajuUnlocked,
+    unlockSaju,
   } = useAppState();
   const { watchThen } = useAdGate();
   const { openToast } = useToast();
@@ -41,6 +43,8 @@ export function SajuScreen() {
   if (!profile || !saju) return null;
 
   const today = kstDate();
+  const readingOpen = isSajuUnlocked("reading");
+  const daewoonOpen = isSajuUnlocked("daewoon");
   const reading = readSaju(
     saju,
     profile.birthDate,
@@ -48,6 +52,8 @@ export function SajuScreen() {
     profile.gender,
     today,
   );
+
+  const flow = flowOf(saju, today, reading.currentFortune);
 
   const pillars = (["hour", "day", "month", "year"] as const)
     .map((k) => pillarSummary(saju, k))
@@ -296,28 +302,140 @@ export function SajuScreen() {
         </div>
       </Card>
 
+      {/* 시간 단위 운의 사다리 — 명리에 주(週) 단위는 없어요.
+          매달·매년 바뀌므로 다시 볼 이유가 되는 화면이라 무료로 둬요. */}
+      <Card style={{ marginTop: 12 }}>
+        <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
+          지금 흐르는 운
+        </Paragraph>
+        <div style={{ marginTop: 10 }}>
+          {flow.map((f) => (
+            <div
+              key={f.label}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "9px 0",
+                borderBottom: `1px solid ${palette.line}`,
+              }}
+            >
+              <Paragraph typography="t7" color={palette.sub} style={{ width: 34 }}>
+                {f.label}
+              </Paragraph>
+              <Paragraph typography="t7" color={palette.sub} style={{ width: 48 }}>
+                {f.when}
+              </Paragraph>
+              <Paragraph
+                typography="t6"
+                fontWeight="bold"
+                color={palette.ink}
+                style={{ width: 44 }}
+              >
+                {f.pillar}
+              </Paragraph>
+              <Paragraph typography="t7" color={palette.primary} style={{ flex: 1 }}>
+                {f.god}
+              </Paragraph>
+              <Paragraph
+                typography="t7"
+                fontWeight="bold"
+                color={f.good ? palette.good : palette.sub}
+              >
+                {f.good ? "순풍" : "역풍"}
+              </Paragraph>
+            </div>
+          ))}
+        </div>
+        <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
+          위에서 아래로 갈수록 짧은 흐름이에요. 사주에는 주(週) 단위가 없어서 대운·세운·월운·일운으로 봐요.
+        </Paragraph>
+      </Card>
+
       <div style={{ marginTop: 12 }}>
         <BannerAd slot="saju_mid" />
       </div>
 
-      {/* 풀이 본문 */}
-      {reading.sections.map((s) => (
-        <Card key={s.title} style={{ marginTop: 12 }}>
-          <Paragraph typography="t6" fontWeight="bold" color={palette.primary}>
-            {s.title}
+      {/* 풀이 본문 — 첫 섹션(일간)은 맛보기로 열어두고 나머지는 광고 해금.
+          사주는 평생 안 바뀌니 한 번 열면 그 사람은 계속 열려 있어요. */}
+      {reading.sections
+        .slice(0, readingOpen ? undefined : 1)
+        .map((s) => (
+          <Card key={s.title} style={{ marginTop: 12 }}>
+            <Paragraph typography="t6" fontWeight="bold" color={palette.primary}>
+              {s.title}
+            </Paragraph>
+            <Paragraph
+              typography="t6"
+              color={palette.ink}
+              style={{ marginTop: 8, lineHeight: 1.7, whiteSpace: "pre-line" }}
+            >
+              {s.body}
+            </Paragraph>
+          </Card>
+        ))}
+
+      {!readingOpen && reading.sections.length > 1 && (
+        <Card style={{ marginTop: 12 }}>
+          <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
+            🔒 남은 풀이 {reading.sections.length - 1}개
           </Paragraph>
           <Paragraph
-            typography="t6"
-            color={palette.ink}
-            style={{ marginTop: 8, lineHeight: 1.7, whiteSpace: "pre-line" }}
+            typography="t7"
+            color={palette.sub}
+            style={{ marginTop: 8, lineHeight: 1.5 }}
           >
-            {s.body}
+            {reading.sections
+              .slice(1)
+              .map((s) => s.title.split(" —")[0])
+              .join(" · ")}
+          </Paragraph>
+          <div style={{ marginTop: 12 }}>
+            <Button
+              display="full"
+              onClick={() =>
+                watchThen(() => {
+                  unlockSaju("reading");
+                  track(EVENT.detailUnlocked, { category: "saju_reading", via: "ad" });
+                  openToast("사주 풀이를 열었어요!");
+                }, "saju_reading")
+              }
+            >
+              📺 광고 보고 전체 풀이 보기
+            </Button>
+          </div>
+          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10 }}>
+            한 번 열면 이 사람 풀이는 계속 볼 수 있어요.
           </Paragraph>
         </Card>
-      ))}
+      )}
 
-      {/* 대운 흐름 */}
-      {reading.fortunes.length > 0 ? (
+      {/* 대운 흐름 — 별도 해금 */}
+      {reading.fortunes.length > 0 && !daewoonOpen ? (
+        <Card style={{ marginTop: 12 }}>
+          <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
+            🔒 대운 흐름 (10년 주기)
+          </Paragraph>
+          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
+            10년마다 바뀌는 큰 흐름을 80년치로 봐요. 지금 어느 대운에 있는지도
+            함께 알려드려요.
+          </Paragraph>
+          <div style={{ marginTop: 12 }}>
+            <Button
+              display="full"
+              onClick={() =>
+                watchThen(() => {
+                  unlockSaju("daewoon");
+                  track(EVENT.detailUnlocked, { category: "saju_daewoon", via: "ad" });
+                  openToast("대운을 열었어요!");
+                }, "saju_daewoon")
+              }
+            >
+              📺 광고 보고 대운 보기
+            </Button>
+          </div>
+        </Card>
+      ) : reading.fortunes.length > 0 ? (
         <Card style={{ marginTop: 12 }}>
           <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
             대운 흐름 (10년 주기)

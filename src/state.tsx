@@ -58,6 +58,12 @@ interface Persisted {
    * 검증 앱이라 아침에 본 문장이 밤에 달라지면 안 되므로 확인 시점에 고정해요.
    */
   pinned: Record<string, Fortune>;
+  /**
+   * 사주 풀이 해금 — `${personId}:reading` / `${personId}:daewoon`.
+   * 사주는 평생 바뀌지 않으니 한 번 열면 계속 열어둬요. 매일 다시 광고를
+   * 보게 하면 짜증만 나고, 사람을 추가할 때마다 새 기회가 생겨요.
+   */
+  sajuUnlocks: Record<string, true>;
   /** 첫 프로필 저장일(YYYY-MM-DD). 신규 유예(전면광고 등) 판단에 써요. */
   installedAt?: string;
   /** 이전 버전 데이터 — 읽고 나면 people 로 옮겨요 */
@@ -74,6 +80,7 @@ const EMPTY: Persisted = {
   checks: {},
   saves: {},
   pinned: {},
+  sajuUnlocks: {},
 };
 
 /** 기기 안에서만 쓰는 id — 충돌만 안 하면 돼요 */
@@ -145,6 +152,9 @@ function save(s: Persisted): void {
   }
 }
 
+/** 사주 풀이에서 광고로 여는 두 덩어리 */
+export type SajuPart = "reading" | "daewoon";
+
 export interface CheckRow {
   date: string;
   category: Category;
@@ -187,6 +197,10 @@ interface StateContextValue {
   fortuneOf: (cat: Category, date?: string) => Fortune | null;
   isUnlocked: (cat: Category) => boolean;
   unlockDetail: (cat: Category) => void;
+  /** 지금 보고 있는 사람의 사주 풀이가 열려 있는지 (사람별 영구) */
+  isSajuUnlocked: (part: SajuPart) => boolean;
+  /** 광고 시청 후 호출 */
+  unlockSaju: (part: SajuPart) => void;
   verdictOf: (cat: Category, date?: string) => boolean | null;
   submitCheck: (cat: Category, verdict: boolean) => void;
   /** 오늘 검증한 카테고리 수 */
@@ -398,6 +412,17 @@ export function StateProvider({ children }: { children: ReactNode }) {
     }));
   }, [today]);
 
+  const unlockSaju = useCallback((part: SajuPart) => {
+    setState((prev) => {
+      const id = prev.activeId || prev.people[0]?.id;
+      if (!id) return prev;
+      return {
+        ...prev,
+        sajuUnlocks: { ...prev.sajuUnlocks, [`${id}:${part}`]: true },
+      };
+    });
+  }, []);
+
   const resetAll = useCallback(() => {
     setState(EMPTY);
   }, []);
@@ -463,6 +488,9 @@ export function StateProvider({ children }: { children: ReactNode }) {
           : null),
       isUnlocked: (cat) => state.unlocked[`${today}:${cat}`] === true,
       unlockDetail,
+      isSajuUnlocked: (part) =>
+        active != null && state.sajuUnlocks[`${active.id}:${part}`] === true,
+      unlockSaju,
       verdictOf: (cat, date = today) => {
         const v = state.checks[`${date}:${cat}`];
         return v === undefined ? null : v;
@@ -496,6 +524,7 @@ export function StateProvider({ children }: { children: ReactNode }) {
     removePerson,
     markViewed,
     unlockDetail,
+    unlockSaju,
     submitCheck,
     saveStreak,
     resetAll,
