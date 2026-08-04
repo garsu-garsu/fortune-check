@@ -6,10 +6,10 @@ import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import {
   CATEGORIES,
-  generateFortune,
   type Category,
   type CategoryMeta,
 } from "../../data/fortune";
+import { TEN_GOD_MEANING } from "../../data/saju";
 import { shareApp } from "../../data/share";
 import { EVENT, track } from "../../lib/analytics";
 import { kstDate } from "../../lib/kst";
@@ -42,7 +42,8 @@ function ScoreBar({ score }: { score: number }) {
 }
 
 export function HomeScreen() {
-  const { profile, today, markViewed, isUnlocked, unlockDetail } = useAppState();
+  const { profile, saju, fortuneOf, markViewed, isUnlocked, unlockDetail } =
+    useAppState();
   const { navigate } = useRouter();
   const { watchThen } = useAdGate();
   const { openToast } = useToast();
@@ -86,8 +87,9 @@ export function HomeScreen() {
   };
 
   const renderDetail = (meta: CategoryMeta) => {
-    const f = generateFortune(today, profile.zodiac, profile.starSign, meta.key);
+    const f = fortuneOf(meta.key);
     const opened = !meta.detail || isUnlocked(meta.key);
+    if (!f) return null;
     return (
       <Card key={meta.key} style={{ marginTop: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -132,7 +134,8 @@ export function HomeScreen() {
     );
   };
 
-  const overall = generateFortune(today, profile.zodiac, profile.starSign, "overall");
+  const overall = fortuneOf("overall");
+  if (!overall || !saju) return null;
 
   return (
     <ScreenLayout
@@ -170,6 +173,27 @@ export function HomeScreen() {
           <Chip label={`행운의 색 ${overall.luckyColor}`} />
           <Chip label={`행운의 숫자 ${overall.luckyNumber}`} />
         </div>
+      </Card>
+
+      {/* 사주 원국에서 나온 오늘의 기운 — 운세 문장 톤을 정하는 근거 */}
+      <Card style={{ marginTop: 12 }}>
+        <Paragraph typography="t7" color={palette.sub}>
+          내 사주 · {saju.year.name}년 {saju.month.name}월 {saju.day.name}일
+          {saju.hour ? ` ${saju.hour.name}시` : ""}
+        </Paragraph>
+        <Paragraph
+          typography="t6"
+          color={palette.ink}
+          style={{ marginTop: 8, lineHeight: 1.6 }}
+        >
+          <b>{saju.dayElement}</b> 기운을 타고났고, 오늘은{" "}
+          <b>{overall.tenGod}</b>({TEN_GOD_MEANING[overall.tenGod]})의 날이에요.
+        </Paragraph>
+        {!profile.birthTime && (
+          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 8 }}>
+            태어난 시간을 넣으면 시주까지 봐요.
+          </Paragraph>
+        )}
       </Card>
 
       {/* 상세운 3종 (보상형 광고 게이트) */}

@@ -8,8 +8,9 @@ import {
   type ReactNode,
 } from "react";
 
-import type { Category } from "./data/fortune";
+import { generateFortune, type Category, type Fortune } from "./data/fortune";
 import { submitVerdict } from "./data/ranking";
+import { computeSaju, type Saju } from "./data/saju";
 import { starSignOf, zodiacOf } from "./data/zodiac";
 import { kstDate, prevDate } from "./lib/kst";
 
@@ -29,6 +30,12 @@ interface Persisted {
   unlocked: Record<string, true>; // `${date}:${cat}` 상세 해금
   checks: Record<string, boolean>; // `${date}:${cat}` → O(true)/X(false)
   saves: Record<string, true>; // 광고로 메운(지킨) 날짜 — 스트릭 유지에만 사용
+  /**
+   * `${date}:${cat}` → 아침에 실제로 보여준 운세.
+   * 운세는 결정적으로 생성되지만 문장 풀이 바뀌면 결과도 바뀌어요.
+   * 검증 앱이라 아침에 본 문장이 밤에 달라지면 안 되므로 확인 시점에 고정해요.
+   */
+  pinned: Record<string, Fortune>;
 }
 
 const STORAGE_KEY = "fc:state:v1";
@@ -39,6 +46,7 @@ const EMPTY: Persisted = {
   unlocked: {},
   checks: {},
   saves: {},
+  pinned: {},
 };
 
 function load(): Persisted {
@@ -68,10 +76,14 @@ export interface CheckRow {
 
 interface StateContextValue {
   profile: Profile | null;
+  /** 생년월일(+생시)로 계산한 사주 원국 */
+  saju: Saju | null;
   today: string;
   saveProfile: (birthDate: string, birthTime?: string, nickname?: string) => void;
   isViewed: (cat: Category) => boolean;
   markViewed: (cat: Category) => void;
+  /** 아침에 고정된 운세를 우선 반환. 없으면 즉석 생성. */
+  fortuneOf: (cat: Category, date?: string) => Fortune | null;
   isUnlocked: (cat: Category) => boolean;
   unlockDetail: (cat: Category) => void;
   verdictOf: (cat: Category, date?: string) => boolean | null;
@@ -154,12 +166,23 @@ export function StateProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  // 확인하는 순간의 운세를 고정해요(밤 검증 때 같은 문장을 봐야 하니까).
   const markViewed = useCallback(
     (cat: Category) => {
-      setState((prev) => ({
-        ...prev,
-        viewed: { ...prev.viewed, [`${today}:${cat}`]: true },
-      }));
+      setState((prev) => {
+        const key = `${today}:${cat}`;
+        if (prev.viewed[key] && prev.pinned[key]) return prev;
+        const s = prev.profile
+          ? computeSaju(prev.profile.birthDate, prev.profile.birthTime)
+          : null;
+        return {
+          ...prev,
+          viewed: { ...prev.viewed, [key]: true },
+          pinned: s
+            ? { ...prev.pinned, [key]: generateFortune(today, s, cat) }
+            : prev.pinned,
+        };
+      });
     },
     [today],
   );
@@ -199,6 +222,14 @@ export function StateProvider({ children }: { children: ReactNode }) {
     setState(EMPTY);
   }, []);
 
+  const saju = useMemo(
+    () =>
+      state.profile
+        ? computeSaju(state.profile.birthDate, state.profile.birthTime)
+        : null,
+    [state.profile],
+  );
+
   const value = useMemo<StateContextValue>(() => {
     const allChecks: CheckRow[] = Object.entries(state.checks).map(
       ([key, verdict]) => {
@@ -219,10 +250,14 @@ export function StateProvider({ children }: { children: ReactNode }) {
 
     return {
       profile: state.profile,
+      saju,
       today,
       saveProfile,
       isViewed: (cat) => state.viewed[`${today}:${cat}`] === true,
       markViewed,
+      fortuneOf: (cat, date = today) =>
+        state.pinned[`${date}:${cat}`] ??
+        (saju ? generateFortune(date, saju, cat) : null),
       isUnlocked: (cat) => state.unlocked[`${today}:${cat}`] === true,
       unlockDetail,
       verdictOf: (cat, date = today) => {
@@ -240,6 +275,7 @@ export function StateProvider({ children }: { children: ReactNode }) {
     };
   }, [
     state,
+    saju,
     today,
     saveProfile,
     markViewed,

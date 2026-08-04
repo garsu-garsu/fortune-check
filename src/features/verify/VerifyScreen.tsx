@@ -2,12 +2,9 @@ import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
 import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
-import {
-  CATEGORIES,
-  generateFortune,
-  type CategoryMeta,
-} from "../../data/fortune";
+import { CATEGORIES, type CategoryMeta } from "../../data/fortune";
 import { EVENT, track } from "../../lib/analytics";
+import { askReviewOnce } from "../../lib/review";
 import { useAdGate } from "../../hooks/useAdGate";
 import { useInterstitialAd } from "../../hooks/useInterstitialAd";
 import { useRouter } from "../../router";
@@ -17,7 +14,7 @@ import { palette } from "../../theme";
 export function VerifyScreen() {
   const {
     profile,
-    today,
+    fortuneOf,
     isViewed,
     verdictOf,
     submitCheck,
@@ -27,7 +24,7 @@ export function VerifyScreen() {
     saveStreak,
   } = useAppState();
   const { navigate } = useRouter();
-  const { maybeShow } = useInterstitialAd(3);
+  const { maybeShow } = useInterstitialAd(1);
   const { watchThen } = useAdGate();
   const { openToast } = useToast();
 
@@ -60,10 +57,15 @@ export function VerifyScreen() {
       (c) => c.key !== meta.key && verdictOf(c.key) === null,
     ).length;
     if (wasAllPending && remaining === 0) {
-      if (streak + 1 === 7 || streak + 1 === 14 || streak + 1 === 30) {
-        track(EVENT.streakMilestone, { days: streak + 1 });
+      const reached = streak + 1;
+      if (reached === 7 || reached === 14 || reached === 30) {
+        track(EVENT.streakMilestone, { days: reached });
       }
-      maybeShow(() => navigate({ name: "stats" }), "verify_done");
+      maybeShow(() => {
+        navigate({ name: "stats" });
+        // 연속 7일 = 만족도가 가장 높은 순간. 리뷰 요청은 평생 1회.
+        if (reached >= 7) askReviewOnce();
+      }, "verify_done");
     }
   };
 
@@ -140,13 +142,10 @@ export function VerifyScreen() {
         </Card>
       ) : (
         viewedCats.map((meta) => {
-          const f = generateFortune(
-            today,
-            profile.zodiac,
-            profile.starSign,
-            meta.key,
-          );
+          // 아침에 고정해둔 문장 — 그 사이 배포가 있어도 같은 문장을 봐요
+          const f = fortuneOf(meta.key);
           const v = verdictOf(meta.key);
+          if (!f) return null;
           return (
             <Card key={meta.key} style={{ marginTop: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>

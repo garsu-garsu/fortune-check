@@ -8,7 +8,7 @@ import { OnboardingScreen } from "./features/onboarding/OnboardingScreen";
 import { StatsScreen } from "./features/stats/StatsScreen";
 import { VerifyScreen } from "./features/verify/VerifyScreen";
 import { trackScreen } from "./lib/analytics";
-import { RouterProvider, useRouter, type RouteName } from "./router";
+import { RouterProvider, useRouter, type Route, type RouteName } from "./router";
 import { StateProvider, useAppState } from "./state";
 import { palette } from "./theme";
 
@@ -81,10 +81,25 @@ function Shell() {
   );
 }
 
+// 밤 알림은 /verify 로 들어와요 — 홈 대신 검증 화면에서 시작해요.
+// 경로 끝 조각과 ?screen= 둘 다 보고, 모르는 값이면 평소대로 홈.
+function initialRoute(): Route {
+  try {
+    const { pathname, search } = window.location;
+    const screen =
+      new URLSearchParams(search).get("screen") ??
+      pathname.split("/").filter(Boolean).pop();
+    if (screen === "verify" || screen === "stats") return { name: screen };
+  } catch {
+    /* noop */
+  }
+  return { name: "home" };
+}
+
 function App() {
   return (
     <StateProvider>
-      <RouterProvider initial={{ name: "home" }}>
+      <RouterProvider initial={initialRoute()}>
         <Shell />
       </RouterProvider>
     </StateProvider>
