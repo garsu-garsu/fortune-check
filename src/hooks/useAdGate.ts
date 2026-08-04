@@ -56,20 +56,26 @@ export function useAdGate() {
             } else if (e.type === "dismissed") {
               setReady(false);
               load();
+              // 보상 없이 닫으면 실행하지 않아요. 다만 아무 반응이 없으면
+              // 버튼이 고장 난 것처럼 보이니 이유를 알려줘요.
               if (rewarded) onReward();
+              else toast.openToast("광고를 끝까지 봐야 열려요.");
             } else if (e.type === "failedToShow") {
               setReady(false);
               load();
+              toast.openToast("광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
             }
           },
           onError: (err) => {
             console.error(err);
             setReady(false);
             load();
+            toast.openToast("광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
           },
         });
       } catch (err) {
         console.error(err);
+        toast.openToast("광고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
       }
     },
     [ready, load, toast],

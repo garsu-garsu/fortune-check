@@ -337,12 +337,15 @@ export function StateProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // 확인하는 순간의 운세를 고정해요(밤 검증 때 같은 문장을 봐야 하니까).
-  // 본인 것만 고정해요 — 다른 사람 운세는 검증 대상이 아니에요.
+  // 언제나 owner(본인) 것을 고정해요 — 홈은 activeId 와 무관하게 본인을 보여주니까요.
+  // 예전엔 activeId 가 다른 사람이면 통째로 건너뛰었는데, 읽기 경로만 me 로
+  // 옮기고 이 가드를 남겨두는 바람에 사람을 추가한 사용자는 pin 이 영영 안 되고
+  // 밤마다 검증 화면이 비었어요(연속기록도 조용히 끊기고요).
   const markViewed = useCallback(
     (cat: Category) => {
       setState((prev) => {
         const owner = prev.people[0];
-        if (!owner || prev.activeId !== owner.id) return prev;
+        if (!owner) return prev;
         const key = `${today}:${cat}`;
         if (prev.viewed[key] && prev.pinned[key]) return prev;
         const s = computeSaju(owner.birthDate, owner.birthTime);
@@ -446,9 +449,18 @@ export function StateProvider({ children }: { children: ReactNode }) {
       markViewed,
       // 일일 운세는 언제나 본인 것이에요. 사람 전환은 사주풀이 탭 안에서만
       // 의미가 있고, 홈·검증·통계까지 남의 것으로 바뀌면 검증 루프가 깨져요.
+      // 폴백도 고정 때와 같은 제외 목록을 넘겨야 같은 문장이 나와요.
+      // 안 넘기면 첫 페인트와 고정 문장이 어긋나요.
       fortuneOf: (cat, date = today) =>
         state.pinned[`${date}:${cat}`] ??
-        (mySaju ? generateFortune(date, mySaju, cat) : null),
+        (mySaju
+          ? generateFortune(
+              date,
+              mySaju,
+              cat,
+              recentTexts(state.pinned, cat, date),
+            )
+          : null),
       isUnlocked: (cat) => state.unlocked[`${today}:${cat}`] === true,
       unlockDetail,
       verdictOf: (cat, date = today) => {

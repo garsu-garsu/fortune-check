@@ -154,8 +154,11 @@ export function computeSaju(birthDate: string, birthTime?: string): Saju {
   const d = Number(birthDate.slice(8, 10));
 
   // 절기 판정은 KST 정오 기준(생시를 모르는 경우의 관례).
-  const hour = birthTime ? Number(birthTime.slice(0, 2)) : 12;
-  const minute = birthTime ? Number(birthTime.slice(3, 5)) : 0;
+  // 저장된 값이 깨져 있으면(예: "7:30") 파싱이 NaN 이 되고 원국 전체가 NaN 이
+  // 되므로, HH:MM 형태가 아니면 생시가 없는 것으로 봐요.
+  const validTime = birthTime && /^\d{2}:\d{2}$/.test(birthTime) ? birthTime : undefined;
+  const hour = validTime ? Number(validTime.slice(0, 2)) : 12;
+  const minute = validTime ? Number(validTime.slice(3, 5)) : 0;
   const utcMs =
     Date.UTC(y, m - 1, d, hour, minute) -
     koreaOffsetMinutes(birthDate) * 60000;
@@ -177,7 +180,7 @@ export function computeSaju(birthDate: string, birthTime?: string): Saju {
   const dayPillar = pillarFromIndex(daysSinceEpoch + 17);
 
   // 시주 — 생시를 입력한 경우만
-  const hourPillar = birthTime
+  const hourPillar = validTime
     ? (() => {
         const hb = hourBranchOf(hour);
         return pillar(hourStemOf(dayPillar.stem, hb), hb);
@@ -707,8 +710,9 @@ export function majorFortuneStartAge(
   const y = Number(birthDate.slice(0, 4));
   const m = Number(birthDate.slice(5, 7));
   const d = Number(birthDate.slice(8, 10));
-  const hh = birthTime ? Number(birthTime.slice(0, 2)) : 12;
-  const mm = birthTime ? Number(birthTime.slice(3, 5)) : 0;
+  const valid = birthTime && /^\d{2}:\d{2}$/.test(birthTime) ? birthTime : undefined;
+  const hh = valid ? Number(valid.slice(0, 2)) : 12;
+  const mm = valid ? Number(valid.slice(3, 5)) : 0;
   const birth =
     Date.UTC(y, m - 1, d, hh, mm) - koreaOffsetMinutes(birthDate) * 60000;
 

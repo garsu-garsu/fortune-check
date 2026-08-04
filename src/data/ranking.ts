@@ -5,6 +5,11 @@ import { ALL_ZODIACS } from "./zodiac";
 
 // 서버에는 개인정보 없이 {익명id, 날짜, 띠, 카테고리, O/X} 집계값만 저장해요.
 
+/** 이 정도는 모여야 그 띠의 적중률을 말할 수 있어요 */
+const MIN_SAMPLES = 10;
+/** 이만큼의 띠가 남아야 "순위"라고 부를 수 있어요 */
+const MIN_ZODIACS = 5;
+
 export interface ZodiacRank {
   zodiac: string;
   emoji: string;
@@ -52,15 +57,17 @@ export async function fetchZodiacRanking(): Promise<{
         p_date: date,
       });
       if (!error && Array.isArray(data) && data.length > 0) {
-        const ranks: ZodiacRank[] = data.map(
-          (row: { zodiac: string; hit_rate: number; samples: number }) => ({
+        const ranks: ZodiacRank[] = data
+          .map((row: { zodiac: string; hit_rate: number; samples: number }) => ({
             zodiac: row.zodiac,
             emoji: ALL_ZODIACS.find((z) => z.name === row.zodiac)?.emoji ?? "🔮",
             hitRate: Math.round(row.hit_rate),
             samples: row.samples,
-          }),
-        );
-        return { ranks, live: true };
+          }))
+          // 표본 두세 건으로 나온 100%를 "전국 집계"라고 보여주면 안 돼요.
+          .filter((r) => r.samples >= MIN_SAMPLES);
+        // 띠가 몇 개 안 남으면 순위 자체가 의미 없어요.
+        if (ranks.length >= MIN_ZODIACS) return { ranks, live: true };
       }
     } catch (e) {
       console.error("랭킹 조회 실패:", e);

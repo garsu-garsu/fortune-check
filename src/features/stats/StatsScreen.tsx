@@ -367,6 +367,9 @@ export function StatsScreen() {
               <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
                 {r.hitRate}%
               </Paragraph>
+              <Paragraph typography="t7" color={palette.sub} style={{ width: 44, textAlign: "right" }}>
+                {r.samples}명
+              </Paragraph>
             </div>
           ))}
         </div>
