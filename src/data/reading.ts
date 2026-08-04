@@ -367,7 +367,7 @@ export function flowOf(
 export function periodReading(
   saju: Saju,
   pillar: { stem: number; branch: number; name: string },
-  unit: "일" | "월",
+  unit: "일" | "월" | "년",
 ): ReadingSection[] {
   const useful = usefulElementsOfV2(saju);
   const god = tenGodFullOf(saju.dayStem, pillar.stem);
@@ -377,7 +377,8 @@ export function periodReading(
   const mark = sinsalOf(saju.day.branch, pillar.branch);
   const noble = isNobleman(saju.dayStem, pillar.branch);
   const isVoidBranch = voidBranchesOf(saju.day).includes(pillar.branch);
-  const period = unit === "일" ? "오늘" : "이번 달";
+  const period =
+    unit === "일" ? "오늘" : unit === "월" ? "이번 달" : "올해";
   const out: ReadingSection[] = [];
 
   out.push({

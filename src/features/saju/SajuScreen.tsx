@@ -67,10 +67,14 @@ export function SajuScreen() {
   const flow = flowOf(saju, today, reading.currentFortune);
   const dailyOpen = isSajuUnlocked("daily");
   const monthlyOpen = isSajuUnlocked("monthly");
+  const yearlyOpen = isSajuUnlocked("yearly");
   const todayPillar = dayPillarOf(today);
-  const monthPillar = computeSaju(today).month;
+  const nowPillars = computeSaju(today);
+  const monthPillar = nowPillars.month;
+  const yearPillar = nowPillars.year;
   const dailySections = periodReading(saju, todayPillar, "일");
   const monthlySections = periodReading(saju, monthPillar, "월");
+  const yearlySections = periodReading(saju, yearPillar, "년");
 
   const pillars = (["hour", "day", "month", "year"] as const)
     .map((k) => pillarSummary(saju, k))
@@ -383,6 +387,21 @@ export function SajuScreen() {
           }, "saju_daily")
         }
         note="내일이 되면 새 풀이가 나와요."
+      />
+
+      <PeriodCard
+        title={`${today.slice(0, 4)}년 사주 상세 풀이`}
+        hint={`올해 세운 ${yearPillar.name}이 내 원국에 어떻게 작용하는지 풀어드려요.`}
+        open={yearlyOpen}
+        sections={yearlySections}
+        onUnlock={() =>
+          watchThen(() => {
+            unlockSaju("yearly");
+            track(EVENT.detailUnlocked, { category: "saju_yearly", via: "ad" });
+            openToast("올해 사주 풀이를 열었어요!");
+          }, "saju_yearly")
+        }
+        note="세운은 입춘에 바뀌어요. 새 세운이 시작되면 새 풀이가 나와요."
       />
 
       <PeriodCard

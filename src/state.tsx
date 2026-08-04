@@ -159,7 +159,12 @@ function save(s: Persisted): void {
  * 안 바뀌는 걸 매일 다시 사게 하면 부당해서 이탈하고, 바뀌는 걸 영구로 주면
  * 수익이 한 번에 끝나요. 그래서 둘을 나눴어요.
  */
-export type SajuPart = "reading" | "daewoon" | "daily" | "monthly";
+export type SajuPart =
+  | "reading"
+  | "daewoon"
+  | "daily"
+  | "monthly"
+  | "yearly";
 
 export interface CheckRow {
   date: string;
@@ -418,25 +423,32 @@ export function StateProvider({ children }: { children: ReactNode }) {
     }));
   }, [today]);
 
-  // daily 는 날짜, monthly 는 달을 키에 넣어 그때마다 다시 열게 해요.
+  // 세운은 입춘에, 월운은 절입에 바뀌어요(1월 1일·1일이 아니에요).
+  // 그래서 달력 날짜가 아니라 그 간지를 키에 넣어요 — 해금이 정확히 그
+  // 세운·월운이 흐르는 동안만 유지돼요.
+  const nowPillars = useMemo(() => computeSaju(today), [today]);
   const sajuKey = useCallback(
-    (id: string, part: SajuPart) =>
-      part === "daily"
-        ? `${id}:daily:${today}`
-        : part === "monthly"
-          ? `${id}:monthly:${today.slice(0, 7)}`
-          : `${id}:${part}`,
-    [today],
+    (p: Person, part: SajuPart) => {
+      // 생년월일·생시·성별이 바뀌면 사주가 통째로 달라지니 해금도 풀려야 해요.
+      // id 만 쓰면 정보를 고쳐도 예전 해금이 그대로 남아요.
+      const who = `${p.id}#${p.birthDate}|${p.birthTime ?? ""}|${p.gender ?? ""}`;
+      if (part === "daily") return `${who}:daily:${today}`;
+      if (part === "monthly") return `${who}:monthly:${nowPillars.month.name}`;
+      if (part === "yearly") return `${who}:yearly:${nowPillars.year.name}`;
+      return `${who}:${part}`;
+    },
+    [today, nowPillars],
   );
 
   const unlockSaju = useCallback(
     (part: SajuPart) => {
       setState((prev) => {
-        const id = prev.activeId || prev.people[0]?.id;
-        if (!id) return prev;
+        const p =
+          prev.people.find((x) => x.id === prev.activeId) ?? prev.people[0];
+        if (!p) return prev;
         return {
           ...prev,
-          sajuUnlocks: { ...prev.sajuUnlocks, [sajuKey(id, part)]: true },
+          sajuUnlocks: { ...prev.sajuUnlocks, [sajuKey(p, part)]: true },
         };
       });
     },
@@ -509,7 +521,7 @@ export function StateProvider({ children }: { children: ReactNode }) {
       isUnlocked: (cat) => state.unlocked[`${today}:${cat}`] === true,
       unlockDetail,
       isSajuUnlocked: (part) =>
-        active != null && state.sajuUnlocks[sajuKey(active.id, part)] === true,
+        active != null && state.sajuUnlocks[sajuKey(active, part)] === true,
       unlockSaju,
       verdictOf: (cat, date = today) => {
         const v = state.checks[`${date}:${cat}`];
