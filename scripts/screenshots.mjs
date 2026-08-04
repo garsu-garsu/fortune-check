@@ -41,7 +41,7 @@ const page = await ctx.newPage();
 
 // ── 온보딩 ──
 await page.goto(BASE, { waitUntil: "networkidle" });
-await waitText(page, "운세 팩트체크");
+await waitText(page, "운세·사주 팩트체크");
 await page.locator('input[type="date"]').fill("1996-05-20");
 await waitText(page, "자리"); // 별자리 미리보기가 떠야 입력 완료
 await shot(page, "onboarding");

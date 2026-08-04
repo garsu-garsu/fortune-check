@@ -11,9 +11,9 @@ import { useAppState } from "../../state";
 import { palette } from "../../theme";
 
 const STEPS = [
-  { emoji: "🔮", title: "아침엔 받아요", desc: "오늘의 운세를 종합·애정·금전·직장으로 확인해요." },
+  { emoji: "🔮", title: "사주로 봐요", desc: "생년월일로 사주 원국을 계산해 오늘의 기운을 풀어요." },
   { emoji: "✅", title: "밤엔 검증해요", desc: "운세가 실제로 맞았는지 O/X로 3초 체크인해요." },
-  { emoji: "📊", title: "적중률을 쌓아요", desc: "나만의 운세 적중률과 전국 띠별 랭킹이 매일 쌓여요." },
+  { emoji: "📊", title: "적중률을 쌓아요", desc: "나에게 어떤 운이 잘 맞는지 매일 또렷해져요." },
 ];
 
 export function OnboardingScreen() {
@@ -53,8 +53,8 @@ export function OnboardingScreen() {
 
   return (
     <ScreenLayout
-      title="운세 팩트체크"
-      subtitle="읽고 끝이 아니라, 맞았는지 검증해요"
+      title="운세·사주 팩트체크"
+      subtitle="사주로 보고, 밤에 맞았는지 검증해요"
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 4 }}>
         {STEPS.map((s, i) => (
@@ -123,7 +123,7 @@ export function OnboardingScreen() {
       </Card>
 
       <Paragraph typography="t7" color={palette.sub} style={{ margin: "14px 4px 0", lineHeight: 1.5 }}>
-        생년월일은 띠·별자리 산출에만 쓰이고 이 기기에만 저장돼요(서버 전송 안 함). 모든 보상은 앱 내 가상 보상이에요.
+        생년월일과 태어난 시간은 사주·띠·별자리 계산에만 쓰이고 이 기기에만 저장돼요(서버 전송 안 함). 모든 보상은 앱 내 가상 보상이에요.
       </Paragraph>
 
       <div style={{ marginTop: 18 }}>
