@@ -10,7 +10,8 @@ import {
   tenGodOf,
   type Saju,
   type TenGod,
-} from "./saju";
+  // 확장자 명시 — scripts/*-check.ts 가 node 로 직접 불러와요
+} from "./saju.ts";
 
 export type Category = "overall" | "love" | "money" | "work";
 type Tone = "good" | "normal" | "caution";
@@ -31,6 +32,17 @@ export const CATEGORIES: CategoryMeta[] = [
 
 export function categoryMeta(key: Category): CategoryMeta {
   return CATEGORIES.find((c) => c.key === key)!;
+}
+
+const DETAIL_KEYS: Category[] = ["love", "money", "work"];
+
+/**
+ * 오늘 광고 없이 열어주는 상세운 1종(날짜로 결정, 매일 바뀜).
+ * 무료 콘텐츠가 종합운 한 줄뿐이면 신규가 첫 화면에서 바로 나가요.
+ * 매일 다른 종이 열려서 "오늘은 뭐가 열렸지" 자체가 재방문 이유가 돼요.
+ */
+export function freeDetailOf(date: string): Category {
+  return DETAIL_KEYS[hash(`free|${date}`) % DETAIL_KEYS.length];
 }
 
 /**

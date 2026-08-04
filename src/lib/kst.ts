@@ -18,6 +18,12 @@ export function kstMonth(d = new Date()): string {
   return kstDate(d).slice(0, 7);
 }
 
+/** 두 YYYY-MM-DD 사이의 일수 (to - from) */
+export function daysBetween(from: string, to: string): number {
+  const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`);
+  return Math.round(ms / 86400000);
+}
+
 /** YYYY-MM-DD 하루 전 */
 export function prevDate(date: string): string {
   const [y, m, d] = date.split("-").map(Number);

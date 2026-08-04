@@ -9,7 +9,8 @@
     "deploy": "ait deploy",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "check:saju": "node --experimental-strip-types scripts/saju-check.ts"
+    "check:saju": "node --experimental-strip-types scripts/saju-check.ts",
+    "check:growth": "node --experimental-strip-types scripts/growth-check.ts"
   },
   "dependencies": {
     "@apps-in-toss/web-bridge": "^2.7.0",

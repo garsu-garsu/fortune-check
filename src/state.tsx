@@ -12,7 +12,7 @@ import { generateFortune, type Category, type Fortune } from "./data/fortune";
 import { submitVerdict } from "./data/ranking";
 import { computeSaju, type Saju } from "./data/saju";
 import { starSignOf, zodiacOf } from "./data/zodiac";
-import { kstDate, prevDate } from "./lib/kst";
+import { daysBetween, kstDate, prevDate } from "./lib/kst";
 
 export interface Profile {
   birthDate: string; // YYYY-MM-DD
@@ -36,6 +36,8 @@ interface Persisted {
    * 검증 앱이라 아침에 본 문장이 밤에 달라지면 안 되므로 확인 시점에 고정해요.
    */
   pinned: Record<string, Fortune>;
+  /** 첫 프로필 저장일(YYYY-MM-DD). 신규 유예(전면광고 등) 판단에 써요. */
+  installedAt?: string;
 }
 
 const STORAGE_KEY = "fc:state:v1";
@@ -94,6 +96,10 @@ interface StateContextValue {
   streak: number;
   /** 전체 검증 기록(개인 통계) */
   allChecks: CheckRow[];
+  /** 설치(첫 프로필 저장) 이후 경과 일수. 신규 유예 판단용. */
+  daysSinceInstall: number;
+  /** 어제 검증 성적 — 오늘 다시 올 이유를 홈에서 보여주려고. 없으면 null */
+  yesterday: { hit: number; total: number } | null;
   /** 어제를 놓쳐 연속 기록이 끊길 위기인지(광고로 지킬 수 있는 상태) */
   canSaveStreak: boolean;
   /** 지금 지키면 보존되는 연속 일수 */
@@ -152,6 +158,7 @@ export function StateProvider({ children }: { children: ReactNode }) {
       const s = starSignOf(birthDate);
       setState((prev) => ({
         ...prev,
+        installedAt: prev.installedAt ?? today,
         profile: {
           birthDate,
           birthTime: birthTime || undefined,
@@ -163,7 +170,7 @@ export function StateProvider({ children }: { children: ReactNode }) {
         },
       }));
     },
-    [],
+    [today],
   );
 
   // 확인하는 순간의 운세를 고정해요(밤 검증 때 같은 문장을 봐야 하니까).
@@ -248,6 +255,8 @@ export function StateProvider({ children }: { children: ReactNode }) {
       ? streakEndingAt(present, dayBefore)
       : 0;
 
+    const yRows = allChecks.filter((c) => c.date === yesterday);
+
     return {
       profile: state.profile,
       saju,
@@ -268,6 +277,12 @@ export function StateProvider({ children }: { children: ReactNode }) {
       todayCheckedCount,
       streak: computeStreak(state.checks, state.saves, today),
       allChecks,
+      daysSinceInstall: state.installedAt
+        ? daysBetween(state.installedAt, today)
+        : 0,
+      yesterday: yRows.length
+        ? { hit: yRows.filter((c) => c.verdict).length, total: yRows.length }
+        : null,
       canSaveStreak,
       atRiskStreak,
       saveStreak,

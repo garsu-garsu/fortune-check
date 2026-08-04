@@ -6,6 +6,7 @@ import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import {
   CATEGORIES,
+  freeDetailOf,
   type Category,
   type CategoryMeta,
 } from "../../data/fortune";
@@ -42,23 +43,36 @@ function ScoreBar({ score }: { score: number }) {
 }
 
 export function HomeScreen() {
-  const { profile, saju, fortuneOf, markViewed, isUnlocked, unlockDetail } =
-    useAppState();
+  const {
+    profile,
+    saju,
+    fortuneOf,
+    markViewed,
+    isUnlocked,
+    unlockDetail,
+    streak,
+    yesterday,
+  } = useAppState();
   const { navigate } = useRouter();
   const { watchThen } = useAdGate();
   const { openToast } = useToast();
 
-  // 종합운은 무료 → 진입 시 '확인함' 처리(밤 검증 자격)
+  const today = kstDate();
+  // 오늘 광고 없이 열리는 상세운 1종 (매일 바뀜)
+  const freeDetail = freeDetailOf(today);
+
+  // 무료로 보이는 운세는 진입 시 '확인함' 처리(밤 검증 자격)
   useEffect(() => {
-    if (profile) {
-      markViewed("overall");
-      track(EVENT.fortuneViewed, { category: "overall" });
+    if (!profile) return;
+    for (const cat of ["overall", freeDetail] as Category[]) {
+      markViewed(cat);
+      track(EVENT.fortuneViewed, { category: cat });
     }
-  }, [profile, markViewed]);
+  }, [profile, markViewed, freeDetail]);
 
   if (!profile) return null;
 
-  const dateLabel = kstDate().replace(/-/g, ".");
+  const dateLabel = today.replace(/-/g, ".");
 
   const unlock = (cat: Category) => {
     unlockDetail(cat);
@@ -88,7 +102,8 @@ export function HomeScreen() {
 
   const renderDetail = (meta: CategoryMeta) => {
     const f = fortuneOf(meta.key);
-    const opened = !meta.detail || isUnlocked(meta.key);
+    const isFree = meta.key === freeDetail;
+    const opened = !meta.detail || isFree || isUnlocked(meta.key);
     if (!f) return null;
     return (
       <Card key={meta.key} style={{ marginTop: 12 }}>
@@ -97,6 +112,20 @@ export function HomeScreen() {
           <Paragraph typography="t5" fontWeight="bold" color={palette.ink}>
             {meta.label}
           </Paragraph>
+          {isFree && (
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: palette.primary,
+                background: palette.bg,
+                borderRadius: 999,
+                padding: "3px 8px",
+              }}
+            >
+              오늘 무료
+            </span>
+          )}
           <span style={{ flex: 1 }} />
           <Paragraph typography="t6" fontWeight="bold" color={palette.primary}>
             {opened ? `${f.score}점` : "🔒"}
@@ -142,8 +171,31 @@ export function HomeScreen() {
       title={`${profile.nickname ? profile.nickname + "님의 " : ""}오늘의 운세`}
       subtitle={`${dateLabel} · ${profile.zodiacEmoji} ${profile.zodiac} · ${profile.starSignEmoji} ${profile.starSign}`}
     >
-      {/* 화면당 배너 1개 — 최상단 이미지 강조 */}
-      <BannerAd slot="home_top" />
+      {/* 어제 성적 + 연속 기록 — 다시 온 사람에게 돌아온 값을 먼저 보여줘요 */}
+      {(yesterday || streak > 0) && (
+        <Card
+          style={{
+            marginTop: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <span style={{ fontSize: 26 }}>{streak > 0 ? "🔥" : "📊"}</span>
+          <div style={{ flex: 1 }}>
+            <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
+              {yesterday
+                ? `어제 운세 ${yesterday.total}개 중 ${yesterday.hit}개 적중`
+                : `연속 검증 ${streak}일째`}
+            </Paragraph>
+            <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 3 }}>
+              {streak > 0
+                ? `연속 ${streak}일째 · 오늘도 밤에 검증하면 이어져요`
+                : "오늘 운세를 확인하고 밤에 검증해 보세요"}
+            </Paragraph>
+          </div>
+        </Card>
+      )}
 
       {/* 종합운 (무료, 강조 카드) */}
       <Card
@@ -174,6 +226,11 @@ export function HomeScreen() {
           <Chip label={`행운의 숫자 ${overall.luckyNumber}`} />
         </div>
       </Card>
+
+      {/* 배너는 첫 가치(종합운) 뒤에 — 앱을 열자마자 광고부터 보이면 바로 나가요 */}
+      <div style={{ marginTop: 12 }}>
+        <BannerAd slot="home_top" />
+      </div>
 
       {/* 사주 원국에서 나온 오늘의 기운 — 운세 문장 톤을 정하는 근거 */}
       <Card style={{ marginTop: 12 }}>

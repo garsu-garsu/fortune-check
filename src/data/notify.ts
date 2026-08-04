@@ -37,3 +37,21 @@ export function requestNotifyConsent(): Promise<NotifyConsent | null> {
     }
   });
 }
+
+const RETRY_KEY = "fc:notify-retried";
+
+/**
+ * 온보딩에서 알림을 거절/무시한 사람에게 딱 한 번 더 물어봐요.
+ * 알림이 이 앱의 유일한 복귀 트리거라, 첫 검증을 마친 직후(만족도 최고점)에 요청해요.
+ * 이미 동의한 사람에겐 토스가 alreadyAgreed 로 조용히 통과시켜요.
+ */
+export async function retryNotifyConsentOnce(): Promise<NotifyConsent | null> {
+  try {
+    if (localStorage.getItem(RETRY_KEY)) return null;
+    if (!canRequestNotifyConsent()) return null;
+    localStorage.setItem(RETRY_KEY, "1");
+  } catch {
+    return null;
+  }
+  return requestNotifyConsent();
+}

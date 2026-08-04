@@ -3,6 +3,7 @@ import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import { CATEGORIES, type CategoryMeta } from "../../data/fortune";
+import { retryNotifyConsentOnce } from "../../data/notify";
 import { EVENT, track } from "../../lib/analytics";
 import { askReviewOnce } from "../../lib/review";
 import { useAdGate } from "../../hooks/useAdGate";
@@ -22,6 +23,7 @@ export function VerifyScreen() {
     canSaveStreak,
     atRiskStreak,
     saveStreak,
+    daysSinceInstall,
   } = useAppState();
   const { navigate } = useRouter();
   const { maybeShow } = useInterstitialAd(1);
@@ -61,11 +63,19 @@ export function VerifyScreen() {
       if (reached === 7 || reached === 14 || reached === 30) {
         track(EVENT.streakMilestone, { days: reached });
       }
-      maybeShow(() => {
+      const done = () => {
         navigate({ name: "stats" });
-        // 연속 7일 = 만족도가 가장 높은 순간. 리뷰 요청은 평생 1회.
+        // 검증을 막 끝낸 지금이 만족도 최고점 — 알림 동의를 한 번 더,
+        // 연속 7일부터는 스토어 리뷰를(둘 다 평생 1회).
         if (reached >= 7) askReviewOnce();
-      }, "verify_done");
+        else void retryNotifyConsentOnce().then((r) => {
+          if (r) track(EVENT.notifyConsent, { result: r, where: "verify_done" });
+        });
+      };
+      // 첫 이틀은 전면광고를 띄우지 않아요 — 신규 이탈이 가장 큰 구간이라
+      // 여기서 얻는 노출 1회보다 살아남은 유저의 평생 노출이 훨씬 커요.
+      if (daysSinceInstall < 2) done();
+      else maybeShow(done, "verify_done");
     }
   };
 

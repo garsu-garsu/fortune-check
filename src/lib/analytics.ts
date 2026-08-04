@@ -1,5 +1,7 @@
 import { eventLog } from "@apps-in-toss/web-framework";
 
+import { campaignParams } from "./campaign";
+
 type Primitive = string | number | boolean;
 type Params = Record<string, Primitive | null | undefined>;
 type LogType = "event" | "screen" | "click" | "impression";
@@ -16,9 +18,12 @@ export function track(
   type: LogType = "event",
 ): void {
   try {
-    void eventLog({ log_name: name, log_type: type, params: clean(params) }).catch(
-      () => {},
-    );
+    // 유입 캠페인을 모든 이벤트에 붙여 캠페인별 리텐션·광고수익을 나눠 봐요.
+    void eventLog({
+      log_name: name,
+      log_type: type,
+      params: { ...campaignParams(), ...clean(params) },
+    }).catch(() => {});
   } catch {
     /* noop */
   }

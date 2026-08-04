@@ -5,8 +5,13 @@ import { EVENT, track } from "../lib/analytics";
 import { AD_GROUP_ID_INTERSTITIAL } from "../lib/env";
 
 let callCount = 0; // 모듈 스코프 → 리마운트 사이 유지
+let shownThisSession = false; // 한 세션에 전면광고는 최대 1회
 
-/** N번째 전환마다 1번 전면. 미설정/미로드/차례 아님 → 즉시 통과. */
+/**
+ * N번째 전환마다 1번 전면. 미설정/미로드/차례 아님 → 즉시 통과.
+ * 세션당 1회를 넘지 않아요 — 전면광고는 이탈에 가장 민감한 포맷이라
+ * 노출을 늘리는 것보다 세션을 살리는 쪽이 총 매출에 유리해요.
+ */
 export function useInterstitialAd(frequency = 3) {
   const [ready, setReady] = useState(false);
   const supportedRef = useRef(false);
@@ -42,11 +47,13 @@ export function useInterstitialAd(frequency = 3) {
         AD_GROUP_ID_INTERSTITIAL === "" ||
         !supportedRef.current ||
         !ready ||
-        !isTurn
+        !isTurn ||
+        shownThisSession
       ) {
         onContinue();
         return;
       }
+      shownThisSession = true;
       let done = false;
       const once = () => {
         if (!done) {

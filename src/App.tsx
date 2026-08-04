@@ -8,6 +8,7 @@ import { OnboardingScreen } from "./features/onboarding/OnboardingScreen";
 import { StatsScreen } from "./features/stats/StatsScreen";
 import { VerifyScreen } from "./features/verify/VerifyScreen";
 import { trackScreen } from "./lib/analytics";
+import { captureCampaign } from "./lib/campaign";
 import { RouterProvider, useRouter, type Route, type RouteName } from "./router";
 import { StateProvider, useAppState } from "./state";
 import { palette } from "./theme";
@@ -95,6 +96,9 @@ function initialRoute(): Route {
   }
   return { name: "home" };
 }
+
+// 유입 캠페인은 첫 진입 URL 에만 있어요 — 렌더 전에 잡아둬야 해요.
+captureCampaign();
 
 function App() {
   return (
