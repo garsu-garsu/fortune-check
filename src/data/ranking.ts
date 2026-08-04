@@ -66,20 +66,8 @@ export async function fetchZodiacRanking(): Promise<{
       console.error("랭킹 조회 실패:", e);
     }
   }
-  return { ranks: placeholderRanking(date), live: false };
-}
-
-// 데모/오프라인용: 날짜 시드로 띠별 적중률을 결정적으로 생성(매일 바뀜).
-function placeholderRanking(date: string): ZodiacRank[] {
-  let h = 0;
-  for (let i = 0; i < date.length; i++) h = (h * 31 + date.charCodeAt(i)) >>> 0;
-  return ALL_ZODIACS.map((z, i) => {
-    const seed = (h + i * 2654435761) >>> 0;
-    return {
-      zodiac: z.name,
-      emoji: z.emoji,
-      hitRate: 52 + (seed % 41), // 52~92
-      samples: 40 + (seed % 260),
-    };
-  }).sort((a, b) => b.hitRate - a.hitRate);
+  // 집계가 없으면 빈 결과를 돌려줘요.
+  // 예전엔 그럴듯한 숫자를 지어내 보여줬는데, 사용자에게는 그게 진짜 전국
+  // 통계로 읽여요("내 띠는 오늘 전국 3위"). 없는 데이터는 없다고 말해야 해요.
+  return { ranks: [], live: false };
 }

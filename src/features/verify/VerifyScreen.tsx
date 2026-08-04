@@ -14,7 +14,7 @@ import { palette } from "../../theme";
 
 export function VerifyScreen() {
   const {
-    profile,
+    me: profile,
     fortuneOf,
     isViewed,
     verdictOf,

@@ -31,7 +31,7 @@ function rate(hit: number, total: number): number {
 const MIN_FOR_INSIGHT = 5;
 
 export function StatsScreen() {
-  const { profile, allChecks, streak } = useAppState();
+  const { me: profile, allChecks, streak } = useAppState();
   const { watchThen } = useAdGate();
   const [ranking, setRanking] = useState<ZodiacRank[]>([]);
   const [live, setLive] = useState(false);
@@ -321,11 +321,18 @@ export function StatsScreen() {
             오늘 가장 잘 맞은 띠 🏆
           </Paragraph>
           <span style={{ flex: 1 }} />
-          <Paragraph typography="t7" color={palette.sub}>
-            {live ? "전국 집계" : "데모 집계"}
-          </Paragraph>
+          {live && (
+            <Paragraph typography="t7" color={palette.sub}>
+              전국 집계
+            </Paragraph>
+          )}
         </div>
-        {profile && myZodiacRank > 0 && (
+        {!live && (
+          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
+            아직 오늘 집계가 모이지 않았어요. 저녁에 다시 확인해 주세요.
+          </Paragraph>
+        )}
+        {live && profile && myZodiacRank > 0 && (
           <Paragraph typography="t7" color={palette.primary} fontWeight="bold" style={{ marginTop: 4 }}>
             내 {profile.zodiac}는 오늘 전국 {myZodiacRank}위
           </Paragraph>

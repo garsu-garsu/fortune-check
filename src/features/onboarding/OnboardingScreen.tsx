@@ -152,7 +152,7 @@ export function OnboardingScreen() {
       </Card>
 
       <Paragraph typography="t7" color={palette.sub} style={{ margin: "14px 4px 0", lineHeight: 1.5 }}>
-        생년월일과 태어난 시간은 사주·띠·별자리 계산에만 쓰이고 이 기기에만 저장돼요(서버 전송 안 함). 모든 보상은 앱 내 가상 보상이에요.
+        생년월일·태어난 시간·성별은 사주·띠·별자리 계산에만 쓰이고 이 기기에만 저장돼요. 검증 결과는 이름·생년월일 없이 띠 단위 익명 집계로만 서버에 저장돼요. 모든 보상은 앱 내 가상 보상이에요.
       </Paragraph>
 
       <div style={{ marginTop: 18 }}>

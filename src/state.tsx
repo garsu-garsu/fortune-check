@@ -113,7 +113,15 @@ function migrate(s: Persisted): Persisted {
     s.profile.nickname,
     undefined,
   );
-  return { ...s, people: [me], activeId: me.id, profile: null };
+  return {
+    ...s,
+    people: [me],
+    activeId: me.id,
+    profile: null,
+    // 기존 사용자는 신규가 아니에요. 비워두면 daysSinceInstall 이 0이 되어
+    // 신규 유예(전면광고 2일 스킵)에 영구히 걸려버려요.
+    installedAt: s.installedAt ?? "1970-01-01",
+  };
 }
 
 function load(): Persisted {
@@ -152,8 +160,10 @@ interface StateContextValue {
   people: Person[];
   /** 지금 보고 있는 사람이 본인인지 */
   isViewingSelf: boolean;
-  /** 지금 보고 있는 사람의 사주 원국 */
+  /** 지금 보고 있는 사람의 사주 원국 (사주풀이 탭 전용) */
   saju: Saju | null;
+  /** 본인의 사주 원국 — 홈·검증·통계는 항상 이걸 써요 */
+  meSaju: Saju | null;
   today: string;
   saveProfile: (
     birthDate: string,
@@ -426,6 +436,7 @@ export function StateProvider({ children }: { children: ReactNode }) {
       people: state.people,
       isViewingSelf,
       saju,
+      meSaju: mySaju,
       today,
       saveProfile,
       addPerson,
@@ -433,16 +444,11 @@ export function StateProvider({ children }: { children: ReactNode }) {
       removePerson,
       isViewed: (cat) => state.viewed[`${today}:${cat}`] === true,
       markViewed,
-      fortuneOf: (cat, date = today) => {
-        // 다른 사람을 보고 있으면 그 사람 사주로 즉석 생성(고정 안 함)
-        if (!isViewingSelf) {
-          return saju ? generateFortune(date, saju, cat) : null;
-        }
-        return (
-          state.pinned[`${date}:${cat}`] ??
-          (mySaju ? generateFortune(date, mySaju, cat) : null)
-        );
-      },
+      // 일일 운세는 언제나 본인 것이에요. 사람 전환은 사주풀이 탭 안에서만
+      // 의미가 있고, 홈·검증·통계까지 남의 것으로 바뀌면 검증 루프가 깨져요.
+      fortuneOf: (cat, date = today) =>
+        state.pinned[`${date}:${cat}`] ??
+        (mySaju ? generateFortune(date, mySaju, cat) : null),
       isUnlocked: (cat) => state.unlocked[`${today}:${cat}`] === true,
       unlockDetail,
       verdictOf: (cat, date = today) => {

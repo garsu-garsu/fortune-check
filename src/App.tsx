@@ -18,7 +18,7 @@ const TAB_SCREENS: RouteName[] = ["home", "saju", "verify", "stats"];
 
 function CurrentScreen() {
   const { route } = useRouter();
-  const { profile } = useAppState();
+  const { me: profile } = useAppState();
 
   // 프로필(생년월일)이 없으면 항상 온보딩
   if (!profile) return <OnboardingScreen />;
@@ -41,7 +41,7 @@ function CurrentScreen() {
 
 function Shell() {
   const { route, back, canGoBack } = useRouter();
-  const { profile } = useAppState();
+  const { me: profile } = useAppState();
   const showTabs = profile != null && TAB_SCREENS.includes(route.name);
 
   useEffect(() => {

@@ -43,9 +43,10 @@ function ScoreBar({ score }: { score: number }) {
 }
 
 export function HomeScreen() {
+  // 홈은 언제나 본인 기준이에요(사람 전환은 사주풀이 탭 안에서만).
   const {
-    profile,
-    saju,
+    me: profile,
+    meSaju: saju,
     fortuneOf,
     markViewed,
     isUnlocked,

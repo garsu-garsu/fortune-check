@@ -29,10 +29,14 @@ export function SajuScreen() {
     addPerson,
     selectPerson,
     removePerson,
+    saveProfile,
+    resetAll,
   } = useAppState();
   const { watchThen } = useAdGate();
   const { openToast } = useToast();
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   if (!profile || !saju) return null;
 
@@ -118,6 +122,50 @@ export function SajuScreen() {
               setAdding(false);
               openToast(`${name || "새 사람"}의 사주를 불러왔어요!`);
             }, "add_person");
+          }}
+        />
+      )}
+
+      {/* 온보딩 뒤엔 내 정보를 고칠 방법이 없었어요. "태어난 시간을 넣으면
+          시주까지 봐요" 같은 안내를 따를 수가 없었고, 데이터 삭제 수단도 없었어요. */}
+      {isViewingSelf && (
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <Button display="full" variant="weak" onClick={() => setEditing(true)}>
+            내 정보 수정
+          </Button>
+          <Button
+            display="full"
+            variant="weak"
+            onClick={() => {
+              if (confirmingReset) {
+                resetAll();
+                openToast("모든 데이터를 삭제했어요.");
+              } else {
+                setConfirmingReset(true);
+                openToast("한 번 더 누르면 모두 삭제돼요.");
+              }
+            }}
+          >
+            {confirmingReset ? "정말 삭제할까요?" : "내 데이터 삭제"}
+          </Button>
+        </div>
+      )}
+
+      {editing && (
+        <AddPersonCard
+          title="내 정보 수정"
+          submitLabel="저장"
+          initial={{
+            name: profile.name ?? "",
+            birthDate: profile.birthDate,
+            birthTime: profile.birthTime ?? "",
+            gender: profile.gender,
+          }}
+          onCancel={() => setEditing(false)}
+          onSubmit={(birthDate, birthTime, name, gender) => {
+            saveProfile(birthDate, birthTime, name, gender);
+            setEditing(false);
+            openToast("수정했어요.");
           }}
         />
       )}
@@ -314,8 +362,9 @@ export function SajuScreen() {
         color={palette.sub}
         style={{ margin: "16px 4px 0", lineHeight: 1.5 }}
       >
-        사주 풀이는 재미로 보는 참고 정보예요. 생년월일·시간은 이 기기에만 저장되고
-        서버로 보내지 않아요.
+        사주 풀이는 재미로 보는 참고 정보예요. 생년월일·태어난 시간·성별은 사주 계산에만
+        쓰이고 이 기기에만 저장돼요. 검증 결과는 이름·생년월일 없이 띠 단위 익명 집계로만
+        서버에 저장돼요.
       </Paragraph>
     </ScreenLayout>
   );
@@ -324,6 +373,9 @@ export function SajuScreen() {
 function AddPersonCard({
   onSubmit,
   onCancel,
+  title = "사람 추가",
+  submitLabel = "📺 광고 보고 추가",
+  initial,
 }: {
   onSubmit: (
     birthDate: string,
@@ -332,11 +384,19 @@ function AddPersonCard({
     gender: Gender | undefined,
   ) => void;
   onCancel: () => void;
+  title?: string;
+  submitLabel?: string;
+  initial?: {
+    name: string;
+    birthDate: string;
+    birthTime: string;
+    gender: Gender | undefined;
+  };
 }) {
-  const [birthDate, setBirthDate] = useState("");
-  const [birthTime, setBirthTime] = useState("");
-  const [name, setName] = useState("");
-  const [gender, setGender] = useState<Gender | undefined>(undefined);
+  const [birthDate, setBirthDate] = useState(initial?.birthDate ?? "");
+  const [birthTime, setBirthTime] = useState(initial?.birthTime ?? "");
+  const [name, setName] = useState(initial?.name ?? "");
+  const [gender, setGender] = useState<Gender | undefined>(initial?.gender);
   const { openToast } = useToast();
 
   const preview =
@@ -350,7 +410,7 @@ function AddPersonCard({
   return (
     <Card style={{ marginTop: 12 }}>
       <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
-        사람 추가
+        {title}
       </Paragraph>
 
       <label style={labelStyle}>이름 · 별명</label>
@@ -435,12 +495,15 @@ function AddPersonCard({
             onSubmit(birthDate, birthTime || undefined, name.trim(), gender);
           }}
         >
-          📺 광고 보고 추가
+          {submitLabel}
         </Button>
       </div>
-      <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
-        추가한 사람의 생년월일도 이 기기에만 저장돼요.
-      </Paragraph>
+      {!initial && (
+        <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
+          추가한 사람의 이름·생년월일·시간·성별은 이 기기에만 저장돼요. 본인 동의를 받고
+          입력해 주세요. 언제든 삭제할 수 있어요.
+        </Paragraph>
+      )}
     </Card>
   );
 }

@@ -7,7 +7,7 @@ const DEEP_LINK = "intoss://fortune-check";
 const OG_IMAGE =
   "https://static.toss.im/appsintoss/13203/78c0dc73-c0da-4257-9686-7195c044727d.png";
 
-/** 공유 카드 텍스트로 앱 공유 → 성공 시 상세 1회 해금에 연결. */
+/** 공유 카드 텍스트로 앱 공유. (해금과는 연결돼 있지 않아요) */
 export async function shareApp(message: string): Promise<boolean> {
   const text = `${message} 🔮 [운세·사주 팩트체크]`;
   if (!isInTossApp()) return true; // 브라우저 개발 시 성공으로 간주
