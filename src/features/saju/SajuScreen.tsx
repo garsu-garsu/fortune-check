@@ -375,6 +375,14 @@ export function SajuScreen() {
         color={palette.sub}
         style={{ margin: "16px 4px 0", lineHeight: 1.5 }}
       >
+        시주는 진태양시(서울 기준 약 32분)를 보정해 계산해요. 시계 시각을 그대로 쓰는
+        만세력과는 시주가 한 칸 다를 수 있어요.
+      </Paragraph>
+      <Paragraph
+        typography="t7"
+        color={palette.sub}
+        style={{ margin: "10px 4px 0", lineHeight: 1.5 }}
+      >
         사주 풀이는 재미로 보는 참고 정보예요. 생년월일·태어난 시간·성별은 사주 계산에만
         쓰이고 이 기기에만 저장돼요. 검증 결과는 이름·생년월일 없이 띠 단위 익명 집계로만
         서버에 저장돼요.

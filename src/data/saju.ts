@@ -4,7 +4,7 @@
 // 정확도:
 //  - 일주: 오차 없음(60갑자 순환은 결정적).
 //  - 년주/월주: 절기 경계를 태양 황경으로 계산 → 실제 절입 시각과 수십 분 이내.
-//  - 시주: 생시를 입력한 경우만. 진태양시 보정은 안 해요(경도차 ~30분).
+//  - 시주: 생시를 입력한 경우만. 진태양시(서울 기준 -32분)를 보정해요.
 // 자시(子時) 유파: 일주는 KST 자정에 바뀌어요. 23~24시 출생은 그날 일간을
 // 유지하고 시지만 자시가 돼요 — 이게 야자시설(夜子時)이에요.
 // 자시일수설(23시부터 다음날 일주)을 쓰면 일간 자체가 달라져요.
@@ -80,6 +80,20 @@ export function koreaOffsetMinutes(date: string): number {
   }
   return 9 * 60;
 }
+
+/**
+ * 진태양시(眞太陽時) 보정 — 시계 시각과 하늘의 태양이 어긋나는 만큼 되돌려요.
+ *
+ * 한국 표준시는 동경 135도 기준인데 서울은 127도쯤이에요. 경도 1도당 4분이라
+ * 약 32분 차이가 나요. 시계가 12:00일 때 서울 태양은 12:32에야 남중해요.
+ * 시주의 12지지는 애초에 태양 위치를 쪼갠 것이라 태양 기준으로 봐야 맞아요.
+ *
+ * 보정하면 시지 경계가 11:00 → 11:32 식으로 밀려요. 경계 폭이 120분이라
+ * 생시를 넣은 사람의 약 27%가 한 칸 달라져요.
+ * ponytail: 서울 고정값. 지역별로는 부산 ~23분 등 다르지만, 출생지를 더 받는
+ *           값어치는 없다고 봐요.
+ */
+const TRUE_SOLAR_OFFSET_MIN = 32;
 
 function pillar(stem: number, branch: number): Pillar {
   return { stem, branch, name: STEMS[stem] + BRANCHES[branch] };
@@ -159,9 +173,16 @@ export function computeSaju(birthDate: string, birthTime?: string): Saju {
   const validTime = birthTime && /^\d{2}:\d{2}$/.test(birthTime) ? birthTime : undefined;
   const hour = validTime ? Number(validTime.slice(0, 2)) : 12;
   const minute = validTime ? Number(validTime.slice(3, 5)) : 0;
-  const utcMs =
-    Date.UTC(y, m - 1, d, hour, minute) -
-    koreaOffsetMinutes(birthDate) * 60000;
+  // 시계가 가리킨 시각(그 시대의 한국 표준시 기준)
+  const clockMs = Date.UTC(y, m - 1, d, hour, minute);
+  // 절기 판정용 실제 순간 — 절입은 천문 현상이라 경도 보정과 무관해요
+  const utcMs = clockMs - koreaOffsetMinutes(birthDate) * 60000;
+  // 진태양시 — 일주·시주는 이 시각을 기준으로 봐요
+  const solar = new Date(clockMs - TRUE_SOLAR_OFFSET_MIN * 60000);
+  const solarY = solar.getUTCFullYear();
+  const solarM = solar.getUTCMonth() + 1;
+  const solarD = solar.getUTCDate();
+  const solarHour = solar.getUTCHours();
 
   // 년주 — 입춘 이전이면 전년도
   const sajuYear = utcMs < ipchunMs(y) ? y - 1 : y;
@@ -175,14 +196,18 @@ export function computeSaju(birthDate: string, birthTime?: string): Saju {
     monthBranch,
   );
 
-  // 일주 — 1970-01-01(KST) = 신사일, 60갑자 인덱스 17
-  const daysSinceEpoch = Math.floor(Date.UTC(y, m - 1, d) / 86400000);
+  // 일주 — 1970-01-01 = 신사일, 60갑자 인덱스 17.
+  // 진태양시 기준 날짜를 써요(시주와 같은 시계를 봐야 앞뒤가 맞아요).
+  // 생시 미입력이면 정오 → 11:28이라 날짜가 그대로예요.
+  const daysSinceEpoch = Math.floor(
+    Date.UTC(solarY, solarM - 1, solarD) / 86400000,
+  );
   const dayPillar = pillarFromIndex(daysSinceEpoch + 17);
 
   // 시주 — 생시를 입력한 경우만
   const hourPillar = validTime
     ? (() => {
-        const hb = hourBranchOf(hour);
+        const hb = hourBranchOf(solarHour);
         return pillar(hourStemOf(dayPillar.stem, hb), hb);
       })()
     : null;

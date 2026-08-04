@@ -73,20 +73,46 @@ const equinox = solarLongitude(Date.UTC(2024, 2, 20, 3, 6));
 assert.ok(equinox < 1 || equinox > 359, `춘분 황경이 0도 근처가 아님: ${equinox}`);
 
 // ── 시주 — 오둔시 ──
-// 갑일의 자시는 갑자시
-const dayGap = computeSaju("2024-06-01"); // 일간 확인용
+// 자시 천간 = (그 사주의 일간 % 5) * 2
+// 00:30 은 진태양시로 전날 23:58 이라 일주가 전날이에요 — 시간 천간도
+// '전날 일간' 기준이어야 앞뒤가 맞아요.
 const withHour = computeSaju("2024-06-01", "00:30");
 assert.ok(withHour.hour !== null);
-assert.equal(withHour.hour!.branch, 0); // 00:30 → 자시
-// 자시 천간 = (일간 % 5) * 2
-assert.equal(withHour.hour!.stem, ((dayGap.dayStem % 5) * 2) % 10);
+assert.equal(withHour.hour!.branch, 0); // 자시
+assert.equal(withHour.hour!.stem, ((withHour.dayStem % 5) * 2) % 10);
+assert.equal(withHour.day.name, dayPillarOf("2024-05-31").name);
 // 생시 없으면 시주 없음
 assert.equal(computeSaju("2024-06-01").hour, null);
 
-// 11:30 → 오시(지지 6)
-assert.equal(computeSaju("2024-06-01", "11:30").hour!.branch, 6);
-// 23:30 → 자시(지지 0)
-assert.equal(computeSaju("2024-06-01", "23:30").hour!.branch, 0);
+// ── 진태양시 보정 (서울 -32분) ──
+// 시지 경계가 정각에서 32분 뒤로 밀려요. 11:00~11:31 은 아직 사시예요.
+assert.equal(computeSaju("2024-06-01", "11:20").hour!.branch, 5); // 사시
+assert.equal(computeSaju("2024-06-01", "11:40").hour!.branch, 6); // 오시
+assert.equal(computeSaju("2024-06-01", "12:30").hour!.branch, 6); // 오시
+assert.equal(computeSaju("2024-06-01", "13:20").hour!.branch, 6); // 아직 오시
+assert.equal(computeSaju("2024-06-01", "13:40").hour!.branch, 7); // 미시
+// 23:30 → 진태양시 22:58 → 해시(11). 보정 전에는 자시였어요.
+assert.equal(computeSaju("2024-06-01", "23:30").hour!.branch, 11);
+// 23:40 → 진태양시 23:08 → 자시
+assert.equal(computeSaju("2024-06-01", "23:40").hour!.branch, 0);
+
+// 자정 직후(00:00~00:31)는 진태양시로 전날 23시대 → 일주가 전날이 돼요.
+{
+  const justAfterMidnight = computeSaju("2024-06-01", "00:10");
+  assert.equal(justAfterMidnight.day.name, dayPillarOf("2024-05-31").name);
+  assert.equal(justAfterMidnight.hour!.branch, 0); // 자시
+  // 00:40 은 보정해도 같은 날
+  assert.equal(
+    computeSaju("2024-06-01", "00:40").day.name,
+    dayPillarOf("2024-06-01").name,
+  );
+}
+
+// 생시를 안 넣으면 정오(→11:28) 기준이라 일주가 바뀌면 안 돼요.
+// 대부분의 사용자가 여기 해당하므로 이게 깨지면 전원 원국이 흔들려요.
+for (const d of ["1970-01-01", "2000-01-01", "1900-01-01", "2026-08-04"]) {
+  assert.equal(computeSaju(d).day.name, dayPillarOf(d).name, `${d} 일주 변동`);
+}
 
 // ── 오행 분포 ──
 const s = computeSaju("1990-05-15");
