@@ -1,8 +1,14 @@
+import { useState } from "react";
+
 import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
 import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
-import { CATEGORIES, type CategoryMeta } from "../../data/fortune";
+import {
+  CATEGORIES,
+  type CategoryMeta,
+  type CheckKind,
+} from "../../data/fortune";
 import { retryNotifyConsentOnce } from "../../data/notify";
 import { EVENT, track } from "../../lib/analytics";
 import { askReviewOnce } from "../../lib/review";
@@ -16,6 +22,7 @@ export function VerifyScreen() {
   const {
     me: profile,
     fortuneOf,
+    sajuLineOf,
     isViewed,
     verdictOf,
     submitCheck,
@@ -29,6 +36,7 @@ export function VerifyScreen() {
   const { maybeShow } = useInterstitialAd(1);
   const { watchThen } = useAdGate();
   const { openToast } = useToast();
+  const [kind, setKind] = useState<CheckKind>("운세");
 
   // 연속 기록이 끊길 위기 → 광고 보고 어제를 메워 기록 유지(결정적 2nd-chance)
   const onSaveStreak = () => {
@@ -41,10 +49,14 @@ export function VerifyScreen() {
 
   if (!profile) return null;
 
+  // 전면광고·완료 판정은 두 세그먼트를 합쳐서 봐요(세션당 1회여야 하니까).
   const viewedCats = CATEGORIES.filter((c) => isViewed(c.key));
   const allDone =
     viewedCats.length > 0 &&
     viewedCats.every((c) => verdictOf(c.key) !== null);
+  const shown = viewedCats.filter((c) => c.kind === kind);
+  const pendingOf = (k: CheckKind) =>
+    viewedCats.filter((c) => c.kind === k && verdictOf(c.key) === null).length;
 
   const onVerdict = (meta: CategoryMeta, verdict: boolean) => {
     const wasAllPending = !allDone;
@@ -135,27 +147,76 @@ export function VerifyScreen() {
         </div>
       </Card>
 
-      {viewedCats.length === 0 ? (
-        <Card style={{ marginTop: 16, textAlign: "center" }}>
+      {/* 운세와 사주는 검증하는 대상이 달라서 세그먼트로 나눠요.
+          적중률·연속기록은 하나로 유지돼요(둘로 나누면 둘 다 약해져요). */}
+      <div
+        style={{
+          display: "flex",
+          gap: 4,
+          marginTop: 12,
+          padding: 4,
+          borderRadius: 12,
+          background: palette.bg,
+        }}
+      >
+        {(["운세", "사주"] as const).map((k) => {
+          const on = kind === k;
+          const pending = pendingOf(k);
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setKind(k)}
+              style={{
+                flex: 1,
+                padding: "9px 0",
+                borderRadius: 9,
+                border: "none",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 700,
+                background: on ? palette.white : "transparent",
+                color: on ? palette.primary : palette.sub,
+              }}
+            >
+              {k === "운세" ? "🔮 운세" : "🧭 사주"}
+              {pending > 0 ? ` ${pending}` : ""}
+            </button>
+          );
+        })}
+      </div>
+
+      {shown.length === 0 ? (
+        <Card style={{ marginTop: 12, textAlign: "center" }}>
           <div style={{ fontSize: 40 }}>🌙</div>
           <Paragraph typography="t6" fontWeight="bold" color={palette.ink} style={{ marginTop: 8 }}>
-            아직 확인한 운세가 없어요
+            {kind === "운세"
+              ? "아직 확인한 운세가 없어요"
+              : "아직 오늘 일운을 안 열었어요"}
           </Paragraph>
           <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 6, lineHeight: 1.5 }}>
-            오늘 운세를 먼저 확인하면 밤에 검증할 수 있어요. (아침에 본 운세만 검증돼요)
+            {kind === "운세"
+              ? "오늘 운세를 먼저 확인하면 밤에 검증할 수 있어요. (아침에 본 운세만 검증돼요)"
+              : "사주 탭에서 오늘 일운 풀이를 열면 밤에 맞았는지 검증할 수 있어요."}
           </Paragraph>
           <div style={{ marginTop: 14 }}>
-            <Button display="full" onClick={() => navigate({ name: "home" })}>
-              오늘 운세 확인하러 가기
+            <Button
+              display="full"
+              onClick={() =>
+                navigate({ name: kind === "운세" ? "home" : "saju" })
+              }
+            >
+              {kind === "운세" ? "오늘 운세 확인하러 가기" : "오늘 일운 열러 가기"}
             </Button>
           </div>
         </Card>
       ) : (
-        viewedCats.map((meta) => {
-          // 아침에 고정해둔 문장 — 그 사이 배포가 있어도 같은 문장을 봐요
-          const f = fortuneOf(meta.key);
+        shown.map((meta) => {
+          // 아침(또는 연 시점)에 고정해둔 문장 — 그 사이 배포가 있어도 같은 문장을 봐요
+          const text =
+            meta.kind === "사주" ? sajuLineOf() : (fortuneOf(meta.key)?.text ?? null);
           const v = verdictOf(meta.key);
-          if (!f) return null;
+          if (!text) return null;
           return (
             <Card key={meta.key} style={{ marginTop: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -169,7 +230,7 @@ export function VerifyScreen() {
                 color={palette.ink}
                 style={{ marginTop: 8, lineHeight: 1.6 }}
               >
-                {f.text}
+                {text}
               </Paragraph>
 
               {v === null ? (
@@ -179,7 +240,7 @@ export function VerifyScreen() {
                     onClick={() => onVerdict(meta, true)}
                     style={{ background: palette.good }}
                   >
-                    ⭕ 맞았어요
+                    {meta.kind === "사주" ? "⭕ 비슷했어요" : "⭕ 맞았어요"}
                   </Button>
                   <Button
                     display="full"

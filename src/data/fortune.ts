@@ -21,42 +21,57 @@ import {
   // 확장자 명시 — scripts/*-check.ts 가 node 로 직접 불러와요
 } from "./saju.ts";
 
-export type Category = "overall" | "love" | "money" | "work";
+export type Category = "overall" | "love" | "money" | "work" | "saju";
 type Tone = "good" | "normal" | "caution";
+
+/** 검증 화면을 나누는 축 — 운세 문장이냐 사주 풀이냐 */
+export type CheckKind = "운세" | "사주";
+
+/** 문장 풀에서 뽑는 운세만. 사주 일운은 풀이에서 나오므로 여기 없어요. */
+export type FortuneCategory = Exclude<Category, "saju">;
 
 export interface CategoryMeta {
   key: Category;
   label: string;
   emoji: string;
   detail: boolean; // true면 보상형 광고 게이트로 해금
+  kind: CheckKind;
 }
 
 export const CATEGORIES: CategoryMeta[] = [
-  { key: "overall", label: "종합운", emoji: "🔮", detail: false },
-  { key: "love", label: "애정운", emoji: "💗", detail: true },
-  { key: "money", label: "금전운", emoji: "💰", detail: true },
-  { key: "work", label: "직장운", emoji: "💼", detail: true },
+  { key: "overall", label: "종합운", emoji: "🔮", detail: false, kind: "운세" },
+  { key: "love", label: "애정운", emoji: "💗", detail: true, kind: "운세" },
+  { key: "money", label: "금전운", emoji: "💰", detail: true, kind: "운세" },
+  { key: "work", label: "직장운", emoji: "💼", detail: true, kind: "운세" },
+  // 홈에는 안 나와요 — 사주 탭에서 오늘 일운을 열어야 검증 대상이 돼요.
+  { key: "saju", label: "사주 일운", emoji: "🧭", detail: false, kind: "사주" },
 ];
+
+/** 홈에서 광고로 해금하는 상세운. 사주 일운은 홈에 없어서 여기 안 들어와요. */
+export const DETAIL_CATEGORIES = CATEGORIES.filter(
+  (c): c is CategoryMeta & { key: FortuneCategory } =>
+    c.detail && c.kind === "운세",
+);
 
 export function categoryMeta(key: Category): CategoryMeta {
   return CATEGORIES.find((c) => c.key === key)!;
 }
 
-const DETAIL_KEYS: Category[] = ["love", "money", "work"];
+const DETAIL_KEYS: FortuneCategory[] = ["love", "money", "work"];
 
 /**
  * 오늘 광고 없이 열어주는 상세운 1종(날짜로 결정, 매일 바뀜).
  * 무료 콘텐츠가 종합운 한 줄뿐이면 신규가 첫 화면에서 바로 나가요.
  * 매일 다른 종이 열려서 "오늘은 뭐가 열렸지" 자체가 재방문 이유가 돼요.
  */
-export function freeDetailOf(date: string): Category {
+export function freeDetailOf(date: string): FortuneCategory {
   return DETAIL_KEYS[hash(`free|${date}`) % DETAIL_KEYS.length];
 }
 
 // 톤은 이제 dayPower() 가 사주(용신·십이운성·합충·십성)로 계산해요.
 // 십성 5종만 보던 고정 표(TONE)는 그 계산에 흡수됐어요.
 
-const POOLS: Record<Category, Record<Tone, string[]>> = {
+const POOLS: Record<FortuneCategory, Record<Tone, string[]>> = {
   overall: {
     good: [
       "기분 좋은 작은 행운이 한 번쯤 찾아올 수 있어요.",
@@ -346,7 +361,7 @@ function todayBranchSeed(date: string): number {
 }
 
 /** 카테고리별로 특히 반가운 십성 (+1) / 부담스러운 십성 (-1) */
-const CATEGORY_AFFINITY: Record<Category, Partial<Record<TenGodFull, number>>> = {
+const CATEGORY_AFFINITY: Record<FortuneCategory, Partial<Record<TenGodFull, number>>> = {
   overall: { 정인: 1, 식신: 1, 겁재: -1, 편관: -1 },
   love: { 정재: 1, 식신: 1, 상관: 1, 겁재: -1, 편관: -1 },
   money: { 정재: 1, 편재: 1, 겁재: -1, 상관: -1 },
@@ -360,7 +375,7 @@ const CATEGORY_AFFINITY: Record<Category, Partial<Record<TenGodFull, number>>> =
  * - 일진 지지와 내 일지의 관계(충/합)      : -2 ~ +1
  * - 십성과 카테고리의 궁합                 : -1 ~ +1
  */
-function dayPower(date: string, saju: Saju, category: Category) {
+function dayPower(date: string, saju: Saju, category: FortuneCategory) {
   const today = dayPillarOf(date);
   const tenGodFull = tenGodFullOf(saju.dayStem, today.stem);
   const useful = usefulElementsOfV2(saju);
@@ -385,7 +400,7 @@ function dayPower(date: string, saju: Saju, category: Category) {
 export function generateFortune(
   date: string,
   saju: Saju,
-  category: Category,
+  category: FortuneCategory,
   recentTexts: readonly string[] = [],
 ): Fortune {
   const tenGod = todayTenGod(date, saju);

@@ -85,6 +85,39 @@ export function StatsScreen() {
     };
   }, [allChecks]);
 
+  // 이번 주(월~일) 성적 — 사주에는 주운 단위가 없어서 '집계'로만 만들어요.
+  // 한 달은 너무 길어서 중간에 손을 놓게 되는데, 주 단위면 만회가 눈에 보여요.
+  const week = useMemo(() => {
+    const todayStr = kstDate();
+    const base = new Date(`${todayStr}T00:00:00Z`);
+    const mondayOffset = (base.getUTCDay() + 6) % 7; // 월요일 = 0
+    const dateAt = (offset: number) => {
+      const d = new Date(base);
+      d.setUTCDate(base.getUTCDate() + offset);
+      return d.toISOString().slice(0, 10);
+    };
+    const weekDates = (weeksAgo: number) =>
+      Array.from({ length: 7 }, (_, i) => dateAt(-mondayOffset + i - weeksAgo * 7));
+    const tally = (dates: string[]) => {
+      const rows = allChecks.filter((c) => dates.includes(c.date));
+      return {
+        total: rows.length,
+        hit: rows.filter((c) => c.verdict).length,
+        days: new Set(rows.map((c) => c.date)).size,
+      };
+    };
+    const days = weekDates(0).map((date) => {
+      const rows = allChecks.filter((c) => c.date === date);
+      return {
+        date,
+        total: rows.length,
+        hit: rows.filter((c) => c.verdict).length,
+        future: date > todayStr,
+      };
+    });
+    return { days, now: tally(weekDates(0)), prev: tally(weekDates(1)) };
+  }, [allChecks]);
+
   // 이번 달 달력 — 앞쪽 빈칸은 요일 맞추기용
   const calendar = useMemo(() => {
     const [y, m] = month.split("-").map(Number);
@@ -146,7 +179,7 @@ export function StatsScreen() {
         }}
       >
         <Paragraph typography="t7" color={palette.white} style={{ opacity: 0.85 }}>
-          이번 달 운세 적중률
+          이번 달 적중률 (운세 + 사주)
         </Paragraph>
         <Paragraph
           typography="t1"
@@ -162,6 +195,69 @@ export function StatsScreen() {
             ? "아직 검증한 날이 없어요"
             : `${monthChecks.length}회 검증 · 🔥 연속 ${streak}일`}
         </Paragraph>
+      </Card>
+
+      {/* 이번 주 리포트 */}
+      <Card style={{ marginTop: 12 }}>
+        <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
+          이번 주 리포트 🗓️
+        </Paragraph>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(7, 1fr)",
+            gap: 5,
+            marginTop: 12,
+          }}
+        >
+          {["월", "화", "수", "목", "금", "토", "일"].map((d) => (
+            <div key={d} style={{ textAlign: "center" }}>
+              <Paragraph typography="t7" color={palette.sub}>
+                {d}
+              </Paragraph>
+            </div>
+          ))}
+          {week.days.map((d) => (
+            <div
+              key={d.date}
+              title={d.date}
+              style={{
+                textAlign: "center",
+                fontSize: 18,
+                lineHeight: "30px",
+                opacity: d.future ? 0.25 : 1,
+              }}
+            >
+              {d.total === 0 ? "·" : d.hit * 2 > d.total ? "⭕" : "❌"}
+            </div>
+          ))}
+        </div>
+        <Paragraph
+          typography="t6"
+          color={palette.ink}
+          style={{ marginTop: 10, lineHeight: 1.6 }}
+        >
+          {week.now.total === 0 ? (
+            "이번 주는 아직 검증한 날이 없어요. 오늘부터 시작해도 늦지 않아요."
+          ) : (
+            <>
+              {week.now.days}일 검증 · 적중률{" "}
+              <b>{rate(week.now.hit, week.now.total)}%</b>
+            </>
+          )}
+        </Paragraph>
+        {week.now.total > 0 && week.prev.total > 0 && (
+          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 4 }}>
+            {(() => {
+              const d =
+                rate(week.now.hit, week.now.total) -
+                rate(week.prev.hit, week.prev.total);
+              return d === 0
+                ? "지난주와 같아요"
+                : `지난주보다 ${d > 0 ? "+" : ""}${d}%p`;
+            })()}
+          </Paragraph>
+        )}
       </Card>
 
       {/* 카테고리별 */}

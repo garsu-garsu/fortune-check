@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 
 import { generateFortune } from "../src/data/fortune.ts";
 import { computeSaju } from "../src/data/saju.ts";
+import { dailySajuLine } from "../src/data/reading.ts";
 
 const NO_REPEAT_DAYS = 14; // state.tsx 와 같은 값
 const CATS = ["overall", "love", "money", "work"] as const;
@@ -68,5 +69,34 @@ assert.ok(
   worst > NO_REPEAT_DAYS,
   `최근 ${NO_REPEAT_DAYS}일 제외를 걸었는데 ${worst}일 만에 반복됐어요 (${worstLabel})`,
 );
+
+// 사주 일운도 검증 대상이라 같은 잣대를 대요. 십성(10)×십이운성(12)이라
+// 60갑자 한 바퀴 동안 서로 다른 풀이가 나와야 해요. 관계 문장만 쓰면
+// 지지(12)만 따라가서 12일마다 같은 말이 돌아왔어요.
+{
+  let sajuWorst = Infinity;
+  let sajuLabel = "";
+  for (const birth of BIRTHS) {
+    const s = computeSaju(birth, "09:20");
+    const seenAt = new Map<string, number>();
+    let day = "2026-01-01";
+    for (let i = 0; i < 180; i++) {
+      // 간지 이름은 60일마다 도니 그것만으로 '다르다'고 세지 않아요
+      const t = dailySajuLine(s, day).replace(/일진 .. /, "");
+      const prev = seenAt.get(t);
+      if (prev !== undefined && i - prev < sajuWorst) {
+        sajuWorst = i - prev;
+        sajuLabel = birth;
+      }
+      seenAt.set(t, i);
+      day = nextDate(day);
+    }
+  }
+  console.log(`사주 일운  첫 반복까지 ${sajuWorst}일 (최악: ${sajuLabel})`);
+  assert.ok(
+    sajuWorst > NO_REPEAT_DAYS,
+    `사주 일운이 ${sajuWorst}일 만에 반복돼요 (${sajuLabel})`,
+  );
+}
 
 console.log("repeat-check OK");

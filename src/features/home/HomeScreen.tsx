@@ -6,10 +6,10 @@ import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import { Teaser } from "../../components/Teaser";
 import {
-  CATEGORIES,
+  DETAIL_CATEGORIES,
   freeDetailOf,
-  type Category,
   type CategoryMeta,
+  type FortuneCategory,
 } from "../../data/fortune";
 import { TEN_GOD_MEANING } from "../../data/saju";
 import { shareApp } from "../../data/share";
@@ -66,7 +66,7 @@ export function HomeScreen() {
   // 무료로 보이는 운세는 진입 시 '확인함' 처리(밤 검증 자격)
   useEffect(() => {
     if (!profile) return;
-    for (const cat of ["overall", freeDetail] as Category[]) {
+    for (const cat of ["overall", freeDetail] as FortuneCategory[]) {
       markViewed(cat);
       track(EVENT.fortuneViewed, { category: cat });
     }
@@ -76,14 +76,14 @@ export function HomeScreen() {
 
   const dateLabel = today.replace(/-/g, ".");
 
-  const unlock = (cat: Category) => {
+  const unlock = (cat: FortuneCategory) => {
     unlockDetail(cat);
     markViewed(cat);
     track(EVENT.detailUnlocked, { category: cat, via: "ad" });
     track(EVENT.fortuneViewed, { category: cat });
   };
 
-  const onAdUnlock = (cat: Category) => {
+  const onAdUnlock = (cat: FortuneCategory) => {
     watchThen(() => {
       unlock(cat);
       openToast("상세 운세를 해금했어요!");
@@ -101,7 +101,7 @@ export function HomeScreen() {
     })();
   };
 
-  const renderDetail = (meta: CategoryMeta) => {
+  const renderDetail = (meta: CategoryMeta & { key: FortuneCategory }) => {
     const f = fortuneOf(meta.key);
     const isFree = meta.key === freeDetail;
     const opened = !meta.detail || isFree || isUnlocked(meta.key);
@@ -258,7 +258,7 @@ export function HomeScreen() {
       </Card>
 
       {/* 상세운 3종 (보상형 광고 게이트) */}
-      {CATEGORIES.filter((c) => c.detail).map(renderDetail)}
+      {DETAIL_CATEGORIES.map(renderDetail)}
 
       {/* 공유 + 밤 검증 안내 */}
       <Card style={{ marginTop: 16, textAlign: "center" }}>

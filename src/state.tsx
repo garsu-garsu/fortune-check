@@ -8,8 +8,14 @@ import {
   type ReactNode,
 } from "react";
 
-import { generateFortune, type Category, type Fortune } from "./data/fortune";
+import {
+  generateFortune,
+  type Category,
+  type Fortune,
+  type FortuneCategory,
+} from "./data/fortune";
 import { submitVerdict } from "./data/ranking";
+import { dailySajuLine } from "./data/reading";
 import { computeSaju, type Gender, type Saju } from "./data/saju";
 import { starSignOf, zodiacOf } from "./data/zodiac";
 import { daysBetween, kstDate, prevDate } from "./lib/kst";
@@ -59,6 +65,12 @@ interface Persisted {
    */
   pinned: Record<string, Fortune>;
   /**
+   * `${date}` → 그날 보여준 사주 일운 한 줄.
+   * 운세와 달리 문장 풀에서 뽑는 게 아니라 원국 풀이에서 나와서 따로 둬요.
+   * 고정하는 이유는 같아요 — 아침에 본 문장이 밤에 달라지면 검증이 안 돼요.
+   */
+  pinnedSaju: Record<string, string>;
+  /**
    * 사주 풀이 해금 — `${personId}:reading` / `${personId}:daewoon`.
    * 사주는 평생 바뀌지 않으니 한 번 열면 계속 열어둬요. 매일 다시 광고를
    * 보게 하면 짜증만 나고, 사람을 추가할 때마다 새 기회가 생겨요.
@@ -80,6 +92,7 @@ const EMPTY: Persisted = {
   checks: {},
   saves: {},
   pinned: {},
+  pinnedSaju: {},
   sajuUnlocks: {},
 };
 
@@ -203,7 +216,11 @@ interface StateContextValue {
   /** 본인은 지울 수 없어요 */
   removePerson: (id: string) => void;
   isViewed: (cat: Category) => boolean;
-  markViewed: (cat: Category) => void;
+  markViewed: (cat: FortuneCategory) => void;
+  /** 사주 일운을 열었을 때 호출 — 그날 문장을 고정하고 검증 대상에 올려요 */
+  markSajuViewed: () => void;
+  /** 그날 고정된 사주 일운 한 줄 (검증 화면에서 씀) */
+  sajuLineOf: (date?: string) => string | null;
   /** 보고 있는 사람의 운세. 본인이면 아침에 고정된 문장을 우선 반환. */
   fortuneOf: (cat: Category, date?: string) => Fortune | null;
   isUnlocked: (cat: Category) => boolean;
@@ -367,7 +384,7 @@ export function StateProvider({ children }: { children: ReactNode }) {
   // 옮기고 이 가드를 남겨두는 바람에 사람을 추가한 사용자는 pin 이 영영 안 되고
   // 밤마다 검증 화면이 비었어요(연속기록도 조용히 끊기고요).
   const markViewed = useCallback(
-    (cat: Category) => {
+    (cat: FortuneCategory) => {
       setState((prev) => {
         const owner = prev.people[0];
         if (!owner) return prev;
@@ -392,6 +409,22 @@ export function StateProvider({ children }: { children: ReactNode }) {
     [today],
   );
 
+  // 사주 일운은 문장 풀이 아니라 원국 풀이에서 나와요 — markViewed 와 별도.
+  const markSajuViewed = useCallback(() => {
+    setState((prev) => {
+      const owner = prev.people[0];
+      if (!owner) return prev;
+      const key = `${today}:saju`;
+      if (prev.viewed[key] && prev.pinnedSaju[today]) return prev;
+      const s = computeSaju(owner.birthDate, owner.birthTime);
+      return {
+        ...prev,
+        viewed: { ...prev.viewed, [key]: true },
+        pinnedSaju: { ...prev.pinnedSaju, [today]: dailySajuLine(s, today) },
+      };
+    });
+  }, [today]);
+
   const unlockDetail = useCallback(
     (cat: Category) => {
       setState((prev) => ({
@@ -408,8 +441,9 @@ export function StateProvider({ children }: { children: ReactNode }) {
         ...prev,
         checks: { ...prev.checks, [`${today}:${cat}`]: verdict },
       }));
+      // 전국 랭킹은 운세 적중률 집계라 사주 검증은 보내지 않아요.
       const z = me?.zodiac;
-      if (z) void submitVerdict(z, cat, verdict);
+      if (z && cat !== "saju") void submitVerdict(z, cat, verdict);
     },
     [today, me],
   );
@@ -508,16 +542,20 @@ export function StateProvider({ children }: { children: ReactNode }) {
       // 의미가 있고, 홈·검증·통계까지 남의 것으로 바뀌면 검증 루프가 깨져요.
       // 폴백도 고정 때와 같은 제외 목록을 넘겨야 같은 문장이 나와요.
       // 안 넘기면 첫 페인트와 고정 문장이 어긋나요.
+      markSajuViewed,
+      sajuLineOf: (date = today) => state.pinnedSaju[date] ?? null,
       fortuneOf: (cat, date = today) =>
-        state.pinned[`${date}:${cat}`] ??
-        (mySaju
-          ? generateFortune(
-              date,
-              mySaju,
-              cat,
-              recentTexts(state.pinned, cat, date),
-            )
-          : null),
+        cat === "saju"
+          ? null // 사주 일운은 sajuLineOf 로 봐요
+          : (state.pinned[`${date}:${cat}`] ??
+            (mySaju
+              ? generateFortune(
+                  date,
+                  mySaju,
+                  cat,
+                  recentTexts(state.pinned, cat, date),
+                )
+              : null)),
       isUnlocked: (cat) => state.unlocked[`${today}:${cat}`] === true,
       unlockDetail,
       isSajuUnlocked: (part) =>
@@ -555,6 +593,7 @@ export function StateProvider({ children }: { children: ReactNode }) {
     selectPerson,
     removePerson,
     markViewed,
+    markSajuViewed,
     unlockDetail,
     unlockSaju,
     sajuKey,

@@ -425,6 +425,28 @@ export function periodReading(
   return out;
 }
 
+/**
+ * 밤에 O/X 로 검증할 "오늘 사주 일운".
+ *
+ * 검증 대상은 성향 설명이 아니라 **사주가 오늘에 대해 내린 판정**이에요 —
+ * 순풍/역풍은 사주 화면의 '지금 흐르는 운'과 같은 계산(flowOf)이라 아침에
+ * 본 것과 밤에 검증하는 게 어긋나지 않아요.
+ *
+ * 십성(10) × 십이운성(12) 이라 60갑자 한 바퀴 동안 서로 다른 풀이가 나와요.
+ * 관계 문장만 쓰면 지지(12)만 따라가서 12일마다 같은 말이 돌아와요.
+ */
+export function dailySajuLine(saju: Saju, date: string): string {
+  const pillar = dayPillarOf(date);
+  const flow = flowOf(saju, date, null);
+  const day = flow[flow.length - 1]; // 일운
+  const stage = lifeStageOf(saju.dayStem, pillar.branch);
+  const rel = periodReading(saju, pillar, "일")[2].body.split("\n\n")[0];
+  return (
+    `오늘 일진 ${pillar.name} · ${day.god} · ${stage} — 사주는 오늘을 ` +
+    `${day.good ? "순풍" : "역풍"}으로 봐요.\n${rel}`
+  );
+}
+
 /** 원국 표에 쓸 한 기둥 요약 */
 export function pillarSummary(
   saju: Saju,

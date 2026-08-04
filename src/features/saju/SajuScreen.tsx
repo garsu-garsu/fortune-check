@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
@@ -46,12 +46,20 @@ export function SajuScreen() {
     resetAll,
     isSajuUnlocked,
     unlockSaju,
+    markSajuViewed,
   } = useAppState();
   const { watchThen } = useAdGate();
   const { openToast } = useToast();
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
+
+  // 내 오늘 일운을 열면 밤에 검증할 수 있게 문장을 고정해요.
+  // 남의 사주는 내가 O/X로 판정할 수 없으니 본인일 때만이에요.
+  const myDailyOpen = isViewingSelf && isSajuUnlocked("daily");
+  useEffect(() => {
+    if (myDailyOpen) markSajuViewed();
+  }, [myDailyOpen, markSajuViewed]);
 
   if (!profile || !saju) return null;
 
