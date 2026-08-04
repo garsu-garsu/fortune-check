@@ -152,8 +152,14 @@ function save(s: Persisted): void {
   }
 }
 
-/** 사주 풀이에서 광고로 여는 두 덩어리 */
-export type SajuPart = "reading" | "daewoon";
+/**
+ * 사주 풀이에서 광고로 여는 덩어리.
+ *  - reading / daewoon : 원국은 평생 안 바뀌니 사람별 1회 해금 후 영구
+ *  - daily / monthly   : 내용이 실제로 매일·매달 새로 생기니 그때마다 해금
+ * 안 바뀌는 걸 매일 다시 사게 하면 부당해서 이탈하고, 바뀌는 걸 영구로 주면
+ * 수익이 한 번에 끝나요. 그래서 둘을 나눴어요.
+ */
+export type SajuPart = "reading" | "daewoon" | "daily" | "monthly";
 
 export interface CheckRow {
   date: string;
@@ -412,16 +418,30 @@ export function StateProvider({ children }: { children: ReactNode }) {
     }));
   }, [today]);
 
-  const unlockSaju = useCallback((part: SajuPart) => {
-    setState((prev) => {
-      const id = prev.activeId || prev.people[0]?.id;
-      if (!id) return prev;
-      return {
-        ...prev,
-        sajuUnlocks: { ...prev.sajuUnlocks, [`${id}:${part}`]: true },
-      };
-    });
-  }, []);
+  // daily 는 날짜, monthly 는 달을 키에 넣어 그때마다 다시 열게 해요.
+  const sajuKey = useCallback(
+    (id: string, part: SajuPart) =>
+      part === "daily"
+        ? `${id}:daily:${today}`
+        : part === "monthly"
+          ? `${id}:monthly:${today.slice(0, 7)}`
+          : `${id}:${part}`,
+    [today],
+  );
+
+  const unlockSaju = useCallback(
+    (part: SajuPart) => {
+      setState((prev) => {
+        const id = prev.activeId || prev.people[0]?.id;
+        if (!id) return prev;
+        return {
+          ...prev,
+          sajuUnlocks: { ...prev.sajuUnlocks, [sajuKey(id, part)]: true },
+        };
+      });
+    },
+    [sajuKey],
+  );
 
   const resetAll = useCallback(() => {
     setState(EMPTY);
@@ -489,7 +509,7 @@ export function StateProvider({ children }: { children: ReactNode }) {
       isUnlocked: (cat) => state.unlocked[`${today}:${cat}`] === true,
       unlockDetail,
       isSajuUnlocked: (part) =>
-        active != null && state.sajuUnlocks[`${active.id}:${part}`] === true,
+        active != null && state.sajuUnlocks[sajuKey(active.id, part)] === true,
       unlockSaju,
       verdictOf: (cat, date = today) => {
         const v = state.checks[`${date}:${cat}`];
@@ -525,6 +545,7 @@ export function StateProvider({ children }: { children: ReactNode }) {
     markViewed,
     unlockDetail,
     unlockSaju,
+    sajuKey,
     submitCheck,
     saveStreak,
     resetAll,

@@ -4,8 +4,19 @@ import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
 import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
-import { flowOf, pillarSummary, readSaju } from "../../data/reading";
-import { computeSaju, type Element, type Gender } from "../../data/saju";
+import {
+  flowOf,
+  periodReading,
+  pillarSummary,
+  readSaju,
+  type ReadingSection,
+} from "../../data/reading";
+import {
+  computeSaju,
+  dayPillarOf,
+  type Element,
+  type Gender,
+} from "../../data/saju";
 import { EVENT, track } from "../../lib/analytics";
 import { kstDate } from "../../lib/kst";
 import { useAdGate } from "../../hooks/useAdGate";
@@ -54,6 +65,12 @@ export function SajuScreen() {
   );
 
   const flow = flowOf(saju, today, reading.currentFortune);
+  const dailyOpen = isSajuUnlocked("daily");
+  const monthlyOpen = isSajuUnlocked("monthly");
+  const todayPillar = dayPillarOf(today);
+  const monthPillar = computeSaju(today).month;
+  const dailySections = periodReading(saju, todayPillar, "일");
+  const monthlySections = periodReading(saju, monthPillar, "월");
 
   const pillars = (["hour", "day", "month", "year"] as const)
     .map((k) => pillarSummary(saju, k))
@@ -352,6 +369,37 @@ export function SajuScreen() {
         </Paragraph>
       </Card>
 
+      {/* 오늘·이번 달 상세 — 내용이 실제로 매일·매달 새로 생기므로 그때마다 해금 */}
+      <PeriodCard
+        title="오늘 사주 상세 풀이"
+        hint={`오늘 일진 ${todayPillar.name}이 내 원국에 어떻게 작용하는지 십성·십이운성·충합까지 풀어드려요.`}
+        open={dailyOpen}
+        sections={dailySections}
+        onUnlock={() =>
+          watchThen(() => {
+            unlockSaju("daily");
+            track(EVENT.detailUnlocked, { category: "saju_daily", via: "ad" });
+            openToast("오늘 사주 풀이를 열었어요!");
+          }, "saju_daily")
+        }
+        note="내일이 되면 새 풀이가 나와요."
+      />
+
+      <PeriodCard
+        title={`${Number(today.slice(5, 7))}월 사주 상세 풀이`}
+        hint={`이번 달 월운 ${monthPillar.name}이 내 원국에 어떻게 작용하는지 풀어드려요.`}
+        open={monthlyOpen}
+        sections={monthlySections}
+        onUnlock={() =>
+          watchThen(() => {
+            unlockSaju("monthly");
+            track(EVENT.detailUnlocked, { category: "saju_monthly", via: "ad" });
+            openToast("이번 달 사주 풀이를 열었어요!");
+          }, "saju_monthly")
+        }
+        note="다음 달이 되면 새 풀이가 나와요."
+      />
+
       <div style={{ marginTop: 12 }}>
         <BannerAd slot="saju_mid" />
       </div>
@@ -506,6 +554,71 @@ export function SajuScreen() {
         서버에 저장돼요.
       </Paragraph>
     </ScreenLayout>
+  );
+}
+
+/** 매번 새로 열리는 기간 풀이(오늘·이번 달) 카드 */
+function PeriodCard({
+  title,
+  hint,
+  open,
+  sections,
+  onUnlock,
+  note,
+}: {
+  title: string;
+  hint: string;
+  open: boolean;
+  sections: ReadingSection[];
+  onUnlock: () => void;
+  note: string;
+}) {
+  if (open) {
+    return (
+      <>
+        {sections.map((s, i) => (
+          <Card key={s.title} style={{ marginTop: 12 }}>
+            {i === 0 && (
+              <Paragraph
+                typography="t7"
+                color={palette.sub}
+                style={{ marginBottom: 6 }}
+              >
+                {title}
+              </Paragraph>
+            )}
+            <Paragraph typography="t6" fontWeight="bold" color={palette.primary}>
+              {s.title}
+            </Paragraph>
+            <Paragraph
+              typography="t6"
+              color={palette.ink}
+              style={{ marginTop: 8, lineHeight: 1.7, whiteSpace: "pre-line" }}
+            >
+              {s.body}
+            </Paragraph>
+          </Card>
+        ))}
+      </>
+    );
+  }
+  return (
+    <Card style={{ marginTop: 12 }}>
+      <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
+        🔒 {title}
+      </Paragraph>
+      <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
+        {hint}
+      </Paragraph>
+      <div style={{ marginTop: 12 }}>
+        <Button display="full" onClick={onUnlock}>
+          📺 광고 보고 열어보기
+        </Button>
+      </div>
+      <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10 }}>
+        {note}
+      </Paragraph>
+    </Card>
   );
 }
 

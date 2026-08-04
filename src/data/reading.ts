@@ -10,6 +10,8 @@ import {
   BRANCHES,
   STEMS,
   branchElement,
+  branchHarmOf,
+  branchRelationOf,
   climateOf,
   computeSaju,
   dayPillarOf,
@@ -353,6 +355,72 @@ export function flowOf(
   out.push(step("세운", `${today.slice(0, 4)}년`, now.year));
   out.push(step("월운", `${month}월`, now.month));
   out.push(step("일운", "오늘", dayP));
+  return out;
+}
+
+/**
+ * 오늘(또는 이번 달) 기운이 내 원국에 어떻게 작용하는지 풀어요.
+ * 원국 풀이와 달리 이건 날짜마다 내용이 실제로 바뀌어요.
+ * @param pillar 오늘 일진 또는 이번 달 월건
+ * @param unit "일" | "월"
+ */
+export function periodReading(
+  saju: Saju,
+  pillar: { stem: number; branch: number; name: string },
+  unit: "일" | "월",
+): ReadingSection[] {
+  const useful = usefulElementsOfV2(saju);
+  const god = tenGodFullOf(saju.dayStem, pillar.stem);
+  const stage = lifeStageOf(saju.dayStem, pillar.branch);
+  const relation = branchRelationOf(saju.day.branch, pillar.branch);
+  const harm = branchHarmOf(saju.day.branch, pillar.branch);
+  const mark = sinsalOf(saju.day.branch, pillar.branch);
+  const noble = isNobleman(saju.dayStem, pillar.branch);
+  const isVoidBranch = voidBranchesOf(saju.day).includes(pillar.branch);
+  const period = unit === "일" ? "오늘" : "이번 달";
+  const out: ReadingSection[] = [];
+
+  out.push({
+    title: `${period}의 기운 ${pillar.name} — ${god}`,
+    body:
+      `${TEN_GOD_LIFE[god]}\n\n` +
+      (useful.includes(stemElement(pillar.stem))
+        ? `게다가 나에게 반가운 기운이라 ${period}은 흐름을 타기 좋아요.`
+        : `나에게 급한 기운은 아니라 ${period}은 벌이기보다 다듬는 편이 나아요.`),
+  });
+
+  out.push({
+    title: `내 기운의 세기 — ${stage}`,
+    body: `${period} 자리에서 내 일간은 ${stage}에 해당해요. ${stageWord(stage)}`,
+  });
+
+  const relParts: string[] = [];
+  if (relation === "충") {
+    relParts.push(
+      `내 일지와 부딪히는(충) 기운이에요. 예정이 바뀌거나 자리를 옮길 일이 생기기 쉬워요. 미리 여유를 두면 오히려 정리가 돼요.`,
+    );
+  } else if (relation === "육합" || relation === "삼합") {
+    relParts.push(
+      `내 일지와 어울리는(${relation}) 기운이에요. 사람 일이 부드럽게 풀리고 협조를 얻기 좋아요.`,
+    );
+  }
+  if (harm !== "없음") {
+    relParts.push(
+      harm === "형"
+        ? "형(刑)이 걸려 있어요. 말이 날카로워지기 쉬우니 한 박자 늦춰 답하면 편해요."
+        : harm === "파"
+          ? "파(破)가 걸려 있어요. 하던 것이 한 번 끊겼다 이어질 수 있어요."
+          : "해(害)가 걸려 있어요. 사소한 어긋남이 생길 수 있으니 확인만 한 번 더 하면 돼요.",
+    );
+  }
+  if (mark) relParts.push(`${mark}의 기운이 함께 와요. ${SINSAL_READING[mark]}`);
+  if (noble) relParts.push("천을귀인이 닿는 자리예요. 도움을 청하면 의외로 잘 풀려요.");
+  if (isVoidBranch) relParts.push("공망에 드는 자리라 결과가 더디게 맺혀요. 조급해하지 않는 편이 나아요.");
+  if (relParts.length === 0) {
+    relParts.push("내 원국과 크게 부딪히거나 얽히는 데가 없어요. 평소 속도로 가면 되는 기간이에요.");
+  }
+  out.push({ title: "내 원국과의 관계", body: relParts.join("\n\n") });
+
   return out;
 }
 
