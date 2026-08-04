@@ -200,6 +200,25 @@ interface StateContextValue {
 
 const StateContext = createContext<StateContextValue | null>(null);
 
+/** 같은 문장이 며칠 만에 돌아오지 않게 제외할 기간 */
+const NO_REPEAT_DAYS = 14;
+
+/** 그 카테고리에서 최근 NO_REPEAT_DAYS 일 동안 이미 보여준 문장들 */
+function recentTexts(
+  pinned: Record<string, Fortune>,
+  cat: Category,
+  today: string,
+): string[] {
+  const out: string[] = [];
+  let d = today;
+  for (let i = 0; i < NO_REPEAT_DAYS; i++) {
+    d = prevDate(d);
+    const f = pinned[`${d}:${cat}`];
+    if (f) out.push(f.text);
+  }
+  return out;
+}
+
 /** 검증이 있는 날 + 광고로 지킨 날을 '출석'으로 보는 판정기 */
 function presence(
   checks: Record<string, boolean>,
@@ -320,7 +339,15 @@ export function StateProvider({ children }: { children: ReactNode }) {
         return {
           ...prev,
           viewed: { ...prev.viewed, [key]: true },
-          pinned: { ...prev.pinned, [key]: generateFortune(today, s, cat) },
+          pinned: {
+            ...prev.pinned,
+            [key]: generateFortune(
+              today,
+              s,
+              cat,
+              recentTexts(prev.pinned, cat, today),
+            ),
+          },
         };
       });
     },

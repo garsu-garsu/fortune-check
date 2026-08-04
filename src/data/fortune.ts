@@ -4,12 +4,20 @@
 // 톤: 가능성 화법, 위로·응원. 불안 조장·의료·투자 권유 금지.
 
 import {
+  LIFE_STAGE_POWER,
   branchElement,
+  branchRelationOf,
   dayPillarOf,
+  lifeStageOf,
   stemElement,
+  tenGodFullOf,
   tenGodOf,
+  usefulElementsOfV2,
+  type BranchRelation,
+  type LifeStage,
   type Saju,
   type TenGod,
+  type TenGodFull,
   // 확장자 명시 — scripts/*-check.ts 가 node 로 직접 불러와요
 } from "./saju.ts";
 
@@ -45,24 +53,8 @@ export function freeDetailOf(date: string): Category {
   return DETAIL_KEYS[hash(`free|${date}`) % DETAIL_KEYS.length];
 }
 
-/**
- * 십성 × 카테고리 → 그날 그 분야의 톤.
- * 재성=재물, 관성=책임·질서, 인성=도움·배움, 식상=표현·활동, 비겁=경쟁·지출.
- */
-const TONE: Record<Category, Record<TenGod, Tone>> = {
-  overall: {
-    비겁: "normal", 식상: "good", 재성: "good", 관성: "caution", 인성: "good",
-  },
-  love: {
-    비겁: "caution", 식상: "good", 재성: "good", 관성: "normal", 인성: "normal",
-  },
-  money: {
-    비겁: "caution", 식상: "normal", 재성: "good", 관성: "normal", 인성: "caution",
-  },
-  work: {
-    비겁: "normal", 식상: "caution", 재성: "normal", 관성: "good", 인성: "good",
-  },
-};
+// 톤은 이제 dayPower() 가 사주(용신·십이운성·합충·십성)로 계산해요.
+// 십성 5종만 보던 고정 표(TONE)는 그 계산에 흡수됐어요.
 
 const POOLS: Record<Category, Record<Tone, string[]>> = {
   overall: {
@@ -95,6 +87,12 @@ const POOLS: Record<Category, Record<Tone, string[]>> = {
       "오늘 들은 이야기 중에 기억에 남는 한마디가 있을 거예요.",
       "이동 중에 생각이 정리되는 순간이 있어요.",
       "오늘은 새로 시작하기보다 있던 걸 다듬기 좋은 날이에요.",
+      "오늘은 예정에 없던 이동이 한 번 생길 수 있어요.",
+      "평소 지나치던 것이 오늘따라 눈에 들어와요.",
+      "오늘 쓴 시간 중 절반은 준비하는 데 쓰게 돼요.",
+      "누군가에게 짧게 부탁할 일이 하나 생겨요.",
+      "날씨나 온도가 오늘 계획에 영향을 줄 수 있어요.",
+      "저녁 무렵에 하루를 돌아보는 시간이 생겨요.",
     ],
     caution: [
       "오늘은 서두를수록 놓치는 게 생기니 한 박자 쉬어가요.",
@@ -107,6 +105,12 @@ const POOLS: Record<Category, Record<Tone, string[]>> = {
       "오늘 결정은 하루 미뤄도 늦지 않아요.",
       "익숙한 길에서 예상 밖의 지체가 있을 수 있어요.",
       "오늘은 욕심내기보다 하나만 확실히 끝내는 게 좋아요.",
+      "두 가지를 동시에 하려다 하나를 놓칠 수 있어요.",
+      "연락을 놓쳐 나중에 확인하게 될 수 있어요.",
+      "오늘 산 것 중 하나는 다시 생각하게 될 수 있어요.",
+      "평소보다 기다리는 시간이 길어질 수 있어요.",
+      "오늘은 확답보다 여지를 두는 편이 편해요.",
+      "챙긴 줄 알았던 걸 다시 찾게 될 수 있어요.",
     ],
   },
   love: {
@@ -121,6 +125,12 @@ const POOLS: Record<Category, Record<Tone, string[]>> = {
       "오늘 웃음이 터지는 순간이 한 번은 있어요.",
       "고민을 털어놓기 좋은 상대가 곁에 있어요.",
       "안부를 물었더니 생각보다 긴 답이 돌아올 수 있어요.",
+      "오늘 보낸 메시지에 예상보다 빨리 답이 와요.",
+      "상대가 내 이야기를 기억하고 먼저 꺼낼 수 있어요.",
+      "같이 웃을 만한 이야깃거리가 하나 생겨요.",
+      "오늘 만난 사람과 대화가 자연스럽게 이어져요.",
+      "연락처에서 잊고 있던 이름을 다시 보게 돼요.",
+      "고마운 마음을 표현할 기회가 한 번 와요.",
     ],
     normal: [
       "안부를 묻는 메시지를 받으면 오늘 안에 답하는 게 좋아요.",
@@ -133,6 +143,12 @@ const POOLS: Record<Category, Record<Tone, string[]>> = {
       "함께 볼 만한 것을 추천받거나 추천하게 돼요.",
       "예전 사진이나 기록을 다시 보게 될 수 있어요.",
       "오늘은 표현보다 듣는 쪽이 편한 날이에요.",
+      "먼저 연락이 올지 기다리게 되는 날이에요.",
+      "약속을 잡되 시간은 나중에 정하게 될 수 있어요.",
+      "대화 중에 서로 다른 취향을 확인하게 돼요.",
+      "오늘 나눈 이야기는 짧지만 나쁘지 않아요.",
+      "주변 사람의 소식을 전해 듣게 될 수 있어요.",
+      "오늘은 관계에 큰 변화 없이 지나가요.",
     ],
     caution: [
       "가까운 사람과 사소한 오해가 생길 수 있으니 한 박자 천천히 답해보세요.",
@@ -145,6 +161,12 @@ const POOLS: Record<Category, Record<Tone, string[]>> = {
       "지난 이야기를 다시 꺼내면 길어질 수 있어요.",
       "오늘은 먼저 사과하는 쪽이 편해져요.",
       "단둘보다 여럿이 있는 자리가 편한 날이에요.",
+      "읽고 답을 미루다 잊어버릴 수 있어요.",
+      "오늘은 조언보다 들어주는 쪽이 편해요.",
+      "약속 장소나 시간을 다시 확인하는 게 좋아요.",
+      "평소 같은 말투가 오늘은 다르게 들릴 수 있어요.",
+      "단체 대화방에서는 말을 아끼는 게 좋아요.",
+      "서운한 마음이 들어도 오늘 꺼내지 않는 편이 나아요.",
     ],
   },
   money: {
@@ -159,6 +181,12 @@ const POOLS: Record<Category, Record<Tone, string[]>> = {
       "예정에 없던 소소한 수입이 생길 수 있어요.",
       "지갑이나 계좌를 확인했을 때 생각보다 여유가 있어요.",
       "오늘 산 물건이 값에 비해 만족스러울 거예요.",
+      "찾아본 물건의 가격이 마침 내려가 있을 수 있어요.",
+      "오늘 아낀 돈이 생각보다 큰 금액이 돼요.",
+      "쿠폰이나 기프티콘을 제때 쓰게 될 수 있어요.",
+      "예상했던 비용보다 적게 나올 수 있어요.",
+      "안 쓰던 물건을 정리하다 값어치를 알게 돼요.",
+      "오늘 받은 정산이나 입금이 기억보다 많아요.",
     ],
     normal: [
       "오늘 지출은 평소와 비슷한 선에서 마무리돼요.",
@@ -171,6 +199,12 @@ const POOLS: Record<Category, Record<Tone, string[]>> = {
       "필요한 물건 하나를 목록에 적어두게 돼요.",
       "오늘 쓴 돈이 기억보다 조금 적을 수 있어요.",
       "현금이나 카드를 꺼낼 일이 평소보다 적어요.",
+      "결제 전에 한 번 멈추게 되는 순간이 있어요.",
+      "가계부나 결제 내역을 훑어보게 될 수 있어요.",
+      "필요한 것과 갖고 싶은 것을 구분하게 돼요.",
+      "오늘 쓴 돈은 대부분 예정된 항목이에요.",
+      "할인 소식을 접하지만 사지는 않게 돼요.",
+      "교통비나 식비가 평소 수준으로 나가요.",
     ],
     caution: [
       "오후에 예상 밖의 지출이 생길 수 있으니 결제 전 한 번 더 확인해요.",
@@ -183,6 +217,12 @@ const POOLS: Record<Category, Record<Tone, string[]>> = {
       "예약이나 결제 취소 조건을 한 번 확인해두면 좋아요.",
       "오늘은 지갑을 여는 횟수가 평소보다 많아질 수 있어요.",
       "자동결제 하나가 오늘 빠져나갈 수 있어요.",
+      "결제 단계에서 예상 못 한 금액이 붙을 수 있어요.",
+      "오늘은 여러 곳에서 조금씩 새어나갈 수 있어요.",
+      "무료 체험이 유료로 넘어가는 시점일 수 있어요.",
+      "남의 권유로 지갑을 열게 될 수 있어요.",
+      "환불이나 교환 기한을 놓칠 수 있으니 확인해요.",
+      "카드 실적이나 한도를 한 번 볼 필요가 있어요.",
     ],
   },
   work: {
@@ -197,6 +237,12 @@ const POOLS: Record<Category, Record<Tone, string[]>> = {
       "회의나 대화가 예정보다 일찍 끝날 수 있어요.",
       "새로 배운 것 하나가 바로 쓸모 있게 돼요.",
       "오늘 낸 의견이 그대로 받아들여질 수 있어요.",
+      "오늘 한 일에 대해 좋은 피드백이 돌아와요.",
+      "필요한 사람과 타이밍 좋게 이야기가 닿아요.",
+      "반복하던 일에서 더 빠른 방법을 찾게 돼요.",
+      "오늘 정리한 자료가 바로 쓰이게 돼요.",
+      "막연하던 일의 방향이 오늘 또렷해져요.",
+      "부탁한 일이 예상보다 일찍 처리돼요.",
     ],
     normal: [
       "예상치 못한 연락이나 요청이 하나 들어올 수 있어요.",
@@ -209,6 +255,12 @@ const POOLS: Record<Category, Record<Tone, string[]>> = {
       "일정표를 한 번 고쳐 쓰게 될 수 있어요.",
       "오늘 처리량은 평소와 비슷한 수준이에요.",
       "자리를 비운 사이 연락이 와 있을 수 있어요.",
+      "오늘은 회신을 기다리는 시간이 꽤 있어요.",
+      "할 일 목록에서 하나를 지우고 하나를 더해요.",
+      "오늘 회의는 결론보다 공유 위주로 흘러가요.",
+      "업무 도구나 환경을 손볼 일이 생겨요.",
+      "익숙한 일을 익숙한 방식으로 처리하게 돼요.",
+      "짧은 확인 요청이 몇 번 오갈 수 있어요.",
     ],
     caution: [
       "작은 실수가 보일 수 있으니 보내기 전 한 번 더 확인해요.",
@@ -221,6 +273,12 @@ const POOLS: Record<Category, Record<Tone, string[]>> = {
       "파일이나 링크를 잘못 보낼 수 있으니 한 번 더 봐요.",
       "오후에 집중이 흐트러지는 구간이 있어요.",
       "오늘 정한 것은 기록으로 남겨두는 게 좋아요.",
+      "마무리보다 시작만 여러 개 생길 수 있어요.",
+      "보낸 내용을 다시 고쳐 보내게 될 수 있어요.",
+      "일정이 겹쳐 하나를 미루게 될 수 있어요.",
+      "구두로 정한 것이 어긋날 수 있으니 남겨둬요.",
+      "자료를 찾는 데 예상보다 시간이 걸려요.",
+      "오늘은 무리한 약속을 하지 않는 게 좋아요.",
     ],
   },
 };
@@ -242,8 +300,14 @@ export interface Fortune {
   score: number; // 운세 지수 (재미 요소)
   luckyColor: string;
   luckyNumber: number;
-  /** 오늘 일진이 내 일간에게 어떤 십성인지 */
+  /** 오늘 일진이 내 일간에게 어떤 십성인지 (5종) */
   tenGod: TenGod;
+  /** 음양까지 구분한 십성 (10종) */
+  tenGodFull: TenGodFull;
+  /** 오늘 일진 지지에서 내 일간의 십이운성 */
+  lifeStage: LifeStage;
+  /** 오늘 일진 지지와 내 일지의 관계 */
+  relation: BranchRelation;
 }
 
 function hash(str: string): number {
@@ -281,26 +345,85 @@ function todayBranchSeed(date: string): number {
   return today.branch + branchElement(today.branch).charCodeAt(0);
 }
 
-/** 사주(일간) × 그날 일진 × 카테고리 기반 결정적 운세. */
+/** 카테고리별로 특히 반가운 십성 (+1) / 부담스러운 십성 (-1) */
+const CATEGORY_AFFINITY: Record<Category, Partial<Record<TenGodFull, number>>> = {
+  overall: { 정인: 1, 식신: 1, 겁재: -1, 편관: -1 },
+  love: { 정재: 1, 식신: 1, 상관: 1, 겁재: -1, 편관: -1 },
+  money: { 정재: 1, 편재: 1, 겁재: -1, 상관: -1 },
+  work: { 정관: 1, 정인: 1, 상관: -1, 겁재: -1 },
+};
+
+/**
+ * 그날의 기운 세기를 사주로 계산해요. 톤과 점수가 여기서 나와요.
+ * - 용신(반가운 오행)이 오는 날인가       : +2 / -1
+ * - 일진 지지에서 내 일간의 십이운성       : -2 ~ +2
+ * - 일진 지지와 내 일지의 관계(충/합)      : -2 ~ +1
+ * - 십성과 카테고리의 궁합                 : -1 ~ +1
+ */
+function dayPower(date: string, saju: Saju, category: Category) {
+  const today = dayPillarOf(date);
+  const tenGodFull = tenGodFullOf(saju.dayStem, today.stem);
+  const useful = usefulElementsOfV2(saju);
+  const stage = lifeStageOf(saju.dayStem, today.branch);
+  const relation = branchRelationOf(saju.day.branch, today.branch);
+
+  let power = 0;
+  power += useful.includes(stemElement(today.stem)) ? 2 : -1;
+  power += LIFE_STAGE_POWER[stage] - 2;
+  power += relation === "충" ? -2 : relation === "없음" ? 0 : 1;
+  power += CATEGORY_AFFINITY[category][tenGodFull] ?? 0;
+
+  const tone: Tone = power >= 2 ? "good" : power <= -2 ? "caution" : "normal";
+  return { power, tone, tenGodFull, stage, relation };
+}
+
+/**
+ * 사주(일간) × 그날 일진 × 카테고리 기반 결정적 운세.
+ * @param recentTexts 최근에 이미 보여준 문장들. 여기 있는 건 다시 안 뽑아요.
+ *   같은 문장이 사흘 만에 돌아오면 검증이라는 행위 자체가 무의미해 보여요.
+ */
 export function generateFortune(
   date: string,
   saju: Saju,
   category: Category,
+  recentTexts: readonly string[] = [],
 ): Fortune {
   const tenGod = todayTenGod(date, saju);
-  const tone = TONE[category][tenGod];
+  const { power, tone, tenGodFull, stage, relation } = dayPower(
+    date,
+    saju,
+    category,
+  );
 
   const r = rng(
-    hash(`${date}|${saju.day.name}|${saju.year.name}|${category}|${tenGod}`),
+    hash(`${date}|${saju.day.name}|${saju.year.name}|${category}|${tenGodFull}`),
   );
-  const pool = POOLS[category][tone];
+
+  // 최근 본 문장은 후보에서 빼요. 전부 빠지면(풀이 작으면) 원래 풀로 되돌려요.
+  const full = POOLS[category][tone];
+  const recent = new Set(recentTexts);
+  const fresh = full.filter((t) => !recent.has(t));
+  const pool = fresh.length > 0 ? fresh : full;
   const text = pool[Math.floor(r() * pool.length)];
 
+  // 점수도 톤 구간 안에서 기운 세기에 따라 움직여요
   const [lo, hi] = SCORE_RANGE[tone];
-  const score = lo + Math.floor(r() * (hi - lo + 1));
+  const span = hi - lo;
+  const bias = Math.max(0, Math.min(1, (power + 4) / 10));
+  const score =
+    lo + Math.round(span * (0.3 * bias + 0.7 * r()));
 
   const luckyColor = LUCKY_COLORS[Math.floor(r() * LUCKY_COLORS.length)];
   const luckyNumber = 1 + ((Math.floor(r() * 45) + todayBranchSeed(date)) % 45);
 
-  return { text, score, luckyColor, luckyNumber, tenGod };
+  return {
+    text,
+    score,
+    luckyColor,
+    luckyNumber,
+    tenGod,
+    tenGodFull,
+    lifeStage: stage,
+    relation,
+  };
 }

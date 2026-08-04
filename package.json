@@ -11,7 +11,8 @@
     "typecheck": "tsc -b --force",
     "format": "prettier --write .",
     "check:saju": "node --experimental-strip-types scripts/saju-check.ts",
-    "check:growth": "node --experimental-strip-types scripts/growth-check.ts"
+    "check:growth": "node --experimental-strip-types scripts/growth-check.ts",
+    "check:repeat": "node --experimental-strip-types scripts/repeat-check.ts"
   },
   "dependencies": {
     "@apps-in-toss/web-bridge": "^2.7.0",
