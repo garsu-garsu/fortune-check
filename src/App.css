@@ -11,3 +11,25 @@
     margin: 0 auto;
   }
 }
+
+/* iOS 웹뷰의 date/time 입력은 값 텍스트가 가운데로 밀리고 높이도 글자 입력과
+   달라서, 나란히 둔 필드가 어긋나 보여요. 가상 요소라 인라인 style 로는
+   못 잡아서 여기서 잡아요. */
+input[type="date"],
+input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  line-height: normal;
+  text-align: left;
+}
+
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  margin-left: auto;
+}

@@ -4,6 +4,7 @@ import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
 import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
+import { Teaser } from "../../components/Teaser";
 import {
   flowOf,
   periodReading,
@@ -19,6 +20,7 @@ import {
 } from "../../data/saju";
 import { EVENT, track } from "../../lib/analytics";
 import { kstDate } from "../../lib/kst";
+import { BLURRED } from "../../lib/teaser";
 import { useAdGate } from "../../hooks/useAdGate";
 import { useAppState } from "../../state";
 import { palette } from "../../theme";
@@ -444,14 +446,18 @@ export function SajuScreen() {
 
       {!readingOpen && reading.sections.length > 1 && (
         <Card style={{ marginTop: 12 }}>
-          <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
-            🔒 남은 풀이 {reading.sections.length - 1}개
+          {/* 제목만 나열하면 뭘 여는지 감이 안 와요 — 다음 풀이의 실제 첫
+              줄까지 보여주고 나머지를 가려요. */}
+          <Paragraph typography="t6" fontWeight="bold" color={palette.primary}>
+            🔒 {reading.sections[1].title}
           </Paragraph>
+          <Teaser text={reading.sections[1].body} />
           <Paragraph
             typography="t7"
             color={palette.sub}
             style={{ marginTop: 8, lineHeight: 1.5 }}
           >
+            남은 풀이 {reading.sections.length - 1}개 ·{" "}
             {reading.sections
               .slice(1)
               .map((s) => s.title.split(" —")[0])
@@ -483,7 +489,34 @@ export function SajuScreen() {
           <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
             🔒 대운 흐름 (10년 주기)
           </Paragraph>
-          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
+          {/* 표 자체를 흐리게 — 뭐가 나오는지는 보이되 읽히지는 않게 */}
+          <div style={{ display: "flex", gap: 6, marginTop: 12, ...BLURRED }}>
+            {reading.fortunes.slice(0, 6).map((f) => (
+              <div
+                key={f.startAge}
+                style={{
+                  flex: 1,
+                  textAlign: "center",
+                  padding: "10px 6px",
+                  borderRadius: 10,
+                  background: palette.bg,
+                }}
+              >
+                <Paragraph typography="t7" color={palette.sub}>
+                  {f.startAge}세
+                </Paragraph>
+                <Paragraph
+                  typography="t6"
+                  fontWeight="bold"
+                  color={palette.ink}
+                  style={{ marginTop: 3 }}
+                >
+                  {f.pillar.name}
+                </Paragraph>
+              </div>
+            ))}
+          </div>
+          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
             10년마다 바뀌는 큰 흐름을 80년치로 봐요. 지금 어느 대운에 있는지도
             함께 알려드려요.
           </Paragraph>
@@ -626,12 +659,26 @@ function PeriodCard({
       <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
         🔒 {title}
       </Paragraph>
+      {/* 첫 풀이의 앞 한 줄까지는 보여줘요 */}
+      {sections[0] && (
+        <>
+          <Paragraph
+            typography="t6"
+            fontWeight="bold"
+            color={palette.primary}
+            style={{ marginTop: 10 }}
+          >
+            {sections[0].title}
+          </Paragraph>
+          <Teaser text={sections[0].body} />
+        </>
+      )}
       <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
         {hint}
       </Paragraph>
       <div style={{ marginTop: 12 }}>
         <Button display="full" onClick={onUnlock}>
-          📺 광고 보고 열어보기
+          📺 광고 보고 이어서 보기
         </Button>
       </div>
       <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10 }}>
@@ -791,6 +838,9 @@ const labelStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
+  // date/time 은 내부 높이가 글자 입력과 달라서, 높이를 고정하지 않으면
+  // 필드마다 세로 크기가 어긋나 보여요.
+  height: 48,
   padding: "12px 14px",
   borderRadius: 12,
   border: `1px solid ${palette.line}`,

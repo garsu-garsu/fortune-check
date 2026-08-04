@@ -4,6 +4,7 @@ import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
 import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
+import { Teaser } from "../../components/Teaser";
 import {
   CATEGORIES,
   freeDetailOf,
@@ -145,18 +146,21 @@ export function HomeScreen() {
           </>
         ) : (
           <>
+            {/* 앞 한 줄만 보여주고 나머지는 흐리게 — 뭐가 있는지도 모르면
+                광고를 볼 이유가 없어요. */}
+            <Teaser text={f.text} maxHeight={72} />
+            <div style={{ marginTop: 12 }}>
+              <Button display="full" onClick={() => onAdUnlock(meta.key)}>
+                📺 광고 보고 이어서 보기
+              </Button>
+            </div>
             <Paragraph
               typography="t7"
               color={palette.sub}
               style={{ marginTop: 8, lineHeight: 1.5 }}
             >
-              짧은 광고를 보면 오늘의 {meta.label} 상세를 볼 수 있어요.
+              짧은 광고 하나면 오늘의 {meta.label} 전체와 점수가 열려요.
             </Paragraph>
-            <div style={{ marginTop: 12 }}>
-              <Button display="full" onClick={() => onAdUnlock(meta.key)}>
-                📺 광고 보고 해금
-              </Button>
-            </div>
           </>
         )}
       </Card>

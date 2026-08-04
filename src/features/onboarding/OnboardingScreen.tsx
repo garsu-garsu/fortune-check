@@ -175,6 +175,9 @@ const labelStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
+  // date/time 은 내부 높이가 글자 입력과 달라서, 높이를 고정하지 않으면
+  // 필드마다 세로 크기가 어긋나 보여요.
+  height: 48,
   padding: "12px 14px",
   borderRadius: 12,
   border: `1px solid ${palette.line}`,
