@@ -8,6 +8,7 @@
     "build": "ait build",
     "deploy": "ait deploy",
     "lint": "eslint .",
+    "typecheck": "tsc -b --force",
     "format": "prettier --write .",
     "check:saju": "node --experimental-strip-types scripts/saju-check.ts",
     "check:growth": "node --experimental-strip-types scripts/growth-check.ts"

@@ -168,7 +168,7 @@ export function HomeScreen() {
 
   return (
     <ScreenLayout
-      title={`${profile.nickname ? profile.nickname + "님의 " : ""}오늘의 운세`}
+      title={`${profile.name ? profile.name + "님의 " : ""}오늘의 운세`}
       subtitle={`${dateLabel} · ${profile.zodiacEmoji} ${profile.zodiac} · ${profile.starSignEmoji} ${profile.starSign}`}
     >
       {/* 어제 성적 + 연속 기록 — 다시 온 사람에게 돌아온 값을 먼저 보여줘요 */}

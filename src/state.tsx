@@ -10,13 +10,33 @@ import {
 
 import { generateFortune, type Category, type Fortune } from "./data/fortune";
 import { submitVerdict } from "./data/ranking";
-import { computeSaju, type Saju } from "./data/saju";
+import { computeSaju, type Gender, type Saju } from "./data/saju";
 import { starSignOf, zodiacOf } from "./data/zodiac";
 import { daysBetween, kstDate, prevDate } from "./lib/kst";
 
-export interface Profile {
+/**
+ * 사주를 볼 사람 한 명.
+ * people[0] 은 항상 본인이에요 — 검증·적중률·연속기록은 본인 것만 쌓여요.
+ * (남의 하루가 어땠는지는 내가 O/X로 판정할 수 없으니까요.)
+ */
+export interface Person {
+  id: string;
   birthDate: string; // YYYY-MM-DD
-  birthTime?: string; // 선택 입력
+  birthTime?: string;
+  /** 본인은 닉네임, 추가한 사람은 이름/별명 */
+  name?: string;
+  /** 대운 방향(양남음녀 순행)에 필요. 없으면 대운을 안 보여줘요. */
+  gender?: Gender;
+  zodiac: string;
+  zodiacEmoji: string;
+  starSign: string;
+  starSignEmoji: string;
+}
+
+/** 이전 버전(단일 프로필) 저장 형식 — 마이그레이션에만 써요 */
+interface LegacyProfile {
+  birthDate: string;
+  birthTime?: string;
   nickname?: string;
   zodiac: string;
   zodiacEmoji: string;
@@ -25,9 +45,11 @@ export interface Profile {
 }
 
 interface Persisted {
-  profile: Profile | null;
-  viewed: Record<string, true>; // `${date}:${cat}` 아침 확인
-  unlocked: Record<string, true>; // `${date}:${cat}` 상세 해금
+  people: Person[];
+  /** 지금 보고 있는 사람. people 에 없으면 본인으로 되돌아가요. */
+  activeId: string;
+  viewed: Record<string, true>; // `${date}:${cat}` 아침 확인 (본인만)
+  unlocked: Record<string, true>; // `${date}:${cat}` 상세 해금 (본인만)
   checks: Record<string, boolean>; // `${date}:${cat}` → O(true)/X(false)
   saves: Record<string, true>; // 광고로 메운(지킨) 날짜 — 스트릭 유지에만 사용
   /**
@@ -38,12 +60,15 @@ interface Persisted {
   pinned: Record<string, Fortune>;
   /** 첫 프로필 저장일(YYYY-MM-DD). 신규 유예(전면광고 등) 판단에 써요. */
   installedAt?: string;
+  /** 이전 버전 데이터 — 읽고 나면 people 로 옮겨요 */
+  profile?: LegacyProfile | null;
 }
 
 const STORAGE_KEY = "fc:state:v1";
 
 const EMPTY: Persisted = {
-  profile: null,
+  people: [],
+  activeId: "",
   viewed: {},
   unlocked: {},
   checks: {},
@@ -51,11 +76,53 @@ const EMPTY: Persisted = {
   pinned: {},
 };
 
+/** 기기 안에서만 쓰는 id — 충돌만 안 하면 돼요 */
+function newId(): string {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function makePerson(
+  birthDate: string,
+  birthTime?: string,
+  name?: string,
+  gender?: Gender,
+  id = newId(),
+): Person {
+  const z = zodiacOf(birthDate);
+  const s = starSignOf(birthDate);
+  return {
+    id,
+    birthDate,
+    birthTime: birthTime || undefined,
+    name: name || undefined,
+    gender,
+    zodiac: z.name,
+    zodiacEmoji: z.emoji,
+    starSign: s.name,
+    starSignEmoji: s.emoji,
+  };
+}
+
+/** 단일 프로필로 저장된 기존 사용자를 people[] 로 옮겨요. */
+function migrate(s: Persisted): Persisted {
+  if (s.people?.length) return s;
+  if (!s.profile) return { ...s, people: [], activeId: "" };
+  const me = makePerson(
+    s.profile.birthDate,
+    s.profile.birthTime,
+    s.profile.nickname,
+    undefined,
+  );
+  return { ...s, people: [me], activeId: me.id, profile: null };
+}
+
 function load(): Persisted {
   if (typeof localStorage === "undefined") return EMPTY;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...EMPTY, ...(JSON.parse(raw) as Partial<Persisted>) };
+    if (raw) {
+      return migrate({ ...EMPTY, ...(JSON.parse(raw) as Partial<Persisted>) });
+    }
   } catch {
     /* noop */
   }
@@ -77,14 +144,36 @@ export interface CheckRow {
 }
 
 interface StateContextValue {
-  profile: Profile | null;
-  /** 생년월일(+생시)로 계산한 사주 원국 */
+  /** 지금 보고 있는 사람 (홈·사주풀이가 이걸 써요) */
+  profile: Person | null;
+  /** 본인 — 검증·적중률·연속기록의 주체 */
+  me: Person | null;
+  /** 저장된 사람 전체 (0번이 본인) */
+  people: Person[];
+  /** 지금 보고 있는 사람이 본인인지 */
+  isViewingSelf: boolean;
+  /** 지금 보고 있는 사람의 사주 원국 */
   saju: Saju | null;
   today: string;
-  saveProfile: (birthDate: string, birthTime?: string, nickname?: string) => void;
+  saveProfile: (
+    birthDate: string,
+    birthTime?: string,
+    nickname?: string,
+    gender?: Gender,
+  ) => void;
+  /** 사람 추가(보상형 광고 뒤에 호출). 추가한 사람으로 바로 전환해요. */
+  addPerson: (
+    birthDate: string,
+    birthTime?: string,
+    name?: string,
+    gender?: Gender,
+  ) => void;
+  selectPerson: (id: string) => void;
+  /** 본인은 지울 수 없어요 */
+  removePerson: (id: string) => void;
   isViewed: (cat: Category) => boolean;
   markViewed: (cat: Category) => void;
-  /** 아침에 고정된 운세를 우선 반환. 없으면 즉석 생성. */
+  /** 보고 있는 사람의 운세. 본인이면 아침에 고정된 문장을 우선 반환. */
   fortuneOf: (cat: Category, date?: string) => Fortune | null;
   isUnlocked: (cat: Category) => boolean;
   unlockDetail: (cat: Category) => void;
@@ -152,42 +241,86 @@ export function StateProvider({ children }: { children: ReactNode }) {
     save(state);
   }, [state]);
 
+  const me = state.people[0] ?? null;
+  const active =
+    state.people.find((p) => p.id === state.activeId) ?? me;
+  const isViewingSelf = active != null && me != null && active.id === me.id;
+
   const saveProfile = useCallback(
-    (birthDate: string, birthTime?: string, nickname?: string) => {
-      const z = zodiacOf(birthDate);
-      const s = starSignOf(birthDate);
-      setState((prev) => ({
-        ...prev,
-        installedAt: prev.installedAt ?? today,
-        profile: {
+    (
+      birthDate: string,
+      birthTime?: string,
+      nickname?: string,
+      gender?: Gender,
+    ) => {
+      setState((prev) => {
+        // 본인 자리(0번)만 갈아끼워요. 추가한 사람들은 그대로 둬요.
+        const existing = prev.people[0];
+        const person = makePerson(
           birthDate,
-          birthTime: birthTime || undefined,
-          nickname: nickname || undefined,
-          zodiac: z.name,
-          zodiacEmoji: z.emoji,
-          starSign: s.name,
-          starSignEmoji: s.emoji,
-        },
-      }));
+          birthTime,
+          nickname,
+          gender,
+          existing?.id,
+        );
+        const people = [person, ...prev.people.slice(1)];
+        return {
+          ...prev,
+          installedAt: prev.installedAt ?? today,
+          people,
+          activeId: person.id,
+        };
+      });
     },
     [today],
   );
 
+  const addPerson = useCallback(
+    (birthDate: string, birthTime?: string, name?: string, gender?: Gender) => {
+      setState((prev) => {
+        const person = makePerson(birthDate, birthTime, name, gender);
+        return {
+          ...prev,
+          people: [...prev.people, person],
+          activeId: person.id, // 추가하면 바로 그 사람 사주를 보여줘요
+        };
+      });
+    },
+    [],
+  );
+
+  const selectPerson = useCallback((id: string) => {
+    setState((prev) =>
+      prev.people.some((p) => p.id === id) ? { ...prev, activeId: id } : prev,
+    );
+  }, []);
+
+  const removePerson = useCallback((id: string) => {
+    setState((prev) => {
+      if (prev.people[0]?.id === id) return prev; // 본인은 못 지워요
+      const people = prev.people.filter((p) => p.id !== id);
+      return {
+        ...prev,
+        people,
+        activeId: prev.activeId === id ? people[0].id : prev.activeId,
+      };
+    });
+  }, []);
+
   // 확인하는 순간의 운세를 고정해요(밤 검증 때 같은 문장을 봐야 하니까).
+  // 본인 것만 고정해요 — 다른 사람 운세는 검증 대상이 아니에요.
   const markViewed = useCallback(
     (cat: Category) => {
       setState((prev) => {
+        const owner = prev.people[0];
+        if (!owner || prev.activeId !== owner.id) return prev;
         const key = `${today}:${cat}`;
         if (prev.viewed[key] && prev.pinned[key]) return prev;
-        const s = prev.profile
-          ? computeSaju(prev.profile.birthDate, prev.profile.birthTime)
-          : null;
+        const s = computeSaju(owner.birthDate, owner.birthTime);
         return {
           ...prev,
           viewed: { ...prev.viewed, [key]: true },
-          pinned: s
-            ? { ...prev.pinned, [key]: generateFortune(today, s, cat) }
-            : prev.pinned,
+          pinned: { ...prev.pinned, [key]: generateFortune(today, s, cat) },
         };
       });
     },
@@ -210,10 +343,10 @@ export function StateProvider({ children }: { children: ReactNode }) {
         ...prev,
         checks: { ...prev.checks, [`${today}:${cat}`]: verdict },
       }));
-      const z = state.profile?.zodiac;
+      const z = me?.zodiac;
       if (z) void submitVerdict(z, cat, verdict);
     },
-    [today, state.profile],
+    [today, me],
   );
 
   // 광고로 '어제'를 메워 연속 기록을 이어가요(끊길 위기일 때만 UI에 노출).
@@ -229,12 +362,15 @@ export function StateProvider({ children }: { children: ReactNode }) {
     setState(EMPTY);
   }, []);
 
+  // 보고 있는 사람의 원국
   const saju = useMemo(
-    () =>
-      state.profile
-        ? computeSaju(state.profile.birthDate, state.profile.birthTime)
-        : null,
-    [state.profile],
+    () => (active ? computeSaju(active.birthDate, active.birthTime) : null),
+    [active],
+  );
+  // 본인의 원국 — 운세 생성은 항상 본인 기준이어야 하는 자리가 있어요
+  const mySaju = useMemo(
+    () => (me ? computeSaju(me.birthDate, me.birthTime) : null),
+    [me],
   );
 
   const value = useMemo<StateContextValue>(() => {
@@ -258,15 +394,28 @@ export function StateProvider({ children }: { children: ReactNode }) {
     const yRows = allChecks.filter((c) => c.date === yesterday);
 
     return {
-      profile: state.profile,
+      profile: active,
+      me,
+      people: state.people,
+      isViewingSelf,
       saju,
       today,
       saveProfile,
+      addPerson,
+      selectPerson,
+      removePerson,
       isViewed: (cat) => state.viewed[`${today}:${cat}`] === true,
       markViewed,
-      fortuneOf: (cat, date = today) =>
-        state.pinned[`${date}:${cat}`] ??
-        (saju ? generateFortune(date, saju, cat) : null),
+      fortuneOf: (cat, date = today) => {
+        // 다른 사람을 보고 있으면 그 사람 사주로 즉석 생성(고정 안 함)
+        if (!isViewingSelf) {
+          return saju ? generateFortune(date, saju, cat) : null;
+        }
+        return (
+          state.pinned[`${date}:${cat}`] ??
+          (mySaju ? generateFortune(date, mySaju, cat) : null)
+        );
+      },
       isUnlocked: (cat) => state.unlocked[`${today}:${cat}`] === true,
       unlockDetail,
       verdictOf: (cat, date = today) => {
@@ -290,9 +439,16 @@ export function StateProvider({ children }: { children: ReactNode }) {
     };
   }, [
     state,
+    active,
+    me,
+    isViewingSelf,
     saju,
+    mySaju,
     today,
     saveProfile,
+    addPerson,
+    selectPerson,
+    removePerson,
     markViewed,
     unlockDetail,
     submitCheck,
