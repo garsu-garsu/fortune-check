@@ -1,0 +1,467 @@
+import { useState } from "react";
+
+import { Button, Paragraph, useToast } from "@toss/tds-mobile";
+
+import { BannerAd } from "../../components/BannerAd";
+import { Card, ScreenLayout } from "../../components/ScreenLayout";
+import { pillarSummary, readSaju } from "../../data/reading";
+import { computeSaju, type Element, type Gender } from "../../data/saju";
+import { EVENT, track } from "../../lib/analytics";
+import { kstDate } from "../../lib/kst";
+import { useAdGate } from "../../hooks/useAdGate";
+import { useAppState } from "../../state";
+import { palette } from "../../theme";
+
+const ELEMENT_COLOR: Record<Element, string> = {
+  목: "#2E9E5B",
+  화: "#E1483F",
+  토: "#B08447",
+  금: "#8A8F98",
+  수: "#2F6DB5",
+};
+
+export function SajuScreen() {
+  const {
+    profile,
+    people,
+    saju,
+    isViewingSelf,
+    addPerson,
+    selectPerson,
+    removePerson,
+  } = useAppState();
+  const { watchThen } = useAdGate();
+  const { openToast } = useToast();
+  const [adding, setAdding] = useState(false);
+
+  if (!profile || !saju) return null;
+
+  const today = kstDate();
+  const reading = readSaju(
+    saju,
+    profile.birthDate,
+    profile.birthTime,
+    profile.gender,
+    today,
+  );
+
+  const pillars = (["hour", "day", "month", "year"] as const)
+    .map((k) => pillarSummary(saju, k))
+    .filter((p): p is NonNullable<typeof p> => p != null);
+
+  const maxCount = Math.max(...Object.values(saju.elementCount));
+
+  return (
+    <ScreenLayout
+      title={`${profile.name ? profile.name + "님의 " : "내 "}사주 풀이`}
+      subtitle={`${profile.birthDate.replace(/-/g, ".")}${profile.birthTime ? " " + profile.birthTime : " (시간 미입력)"}`}
+    >
+      {/* 사람 전환 */}
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          overflowX: "auto",
+          padding: "4px 0 2px",
+        }}
+      >
+        {people.map((p, i) => {
+          const on = p.id === profile.id;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => selectPerson(p.id)}
+              style={{
+                flexShrink: 0,
+                padding: "7px 13px",
+                borderRadius: 999,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                border: `1px solid ${on ? palette.primary : palette.line}`,
+                background: on ? palette.primary : palette.white,
+                color: on ? palette.white : palette.sub,
+              }}
+            >
+              {i === 0 ? "나" : (p.name ?? "이름없음")}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          style={{
+            flexShrink: 0,
+            padding: "7px 13px",
+            borderRadius: 999,
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+            border: `1px dashed ${palette.line}`,
+            background: palette.white,
+            color: palette.primary,
+          }}
+        >
+          + 사람 추가
+        </button>
+      </div>
+
+      {adding && (
+        <AddPersonCard
+          onCancel={() => setAdding(false)}
+          onSubmit={(birthDate, birthTime, name, gender) => {
+            // 사람 추가는 보상형 광고를 본 뒤에 열려요
+            watchThen(() => {
+              addPerson(birthDate, birthTime, name, gender);
+              track(EVENT.personAdded, { has_time: birthTime ? 1 : 0 });
+              setAdding(false);
+              openToast(`${name || "새 사람"}의 사주를 불러왔어요!`);
+            }, "add_person");
+          }}
+        />
+      )}
+
+      {!isViewingSelf && (
+        <Card style={{ marginTop: 10, background: palette.bg }}>
+          <Paragraph typography="t7" color={palette.sub} style={{ lineHeight: 1.5 }}>
+            다른 사람의 사주는 <b>보기 전용</b>이에요. 검증과 적중률은 내 것만 쌓여요.
+          </Paragraph>
+          <div style={{ marginTop: 10 }}>
+            <Button
+              display="full"
+              variant="weak"
+              onClick={() => {
+                removePerson(profile.id);
+                openToast("삭제했어요.");
+              }}
+            >
+              이 사람 삭제
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {/* 한 줄 요약 */}
+      <Card
+        style={{
+          marginTop: 12,
+          background: `linear-gradient(135deg, ${palette.primary}, ${palette.primaryDeep})`,
+        }}
+      >
+        <Paragraph
+          typography="t5"
+          fontWeight="bold"
+          color={palette.white}
+          style={{ lineHeight: 1.6 }}
+        >
+          {reading.headline}
+        </Paragraph>
+      </Card>
+
+      {/* 원국 4기둥 */}
+      <Card style={{ marginTop: 12 }}>
+        <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
+          사주 원국
+        </Paragraph>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          {pillars.map((p) => (
+            <div key={p.label} style={{ flex: 1, textAlign: "center" }}>
+              <Paragraph typography="t7" color={palette.sub}>
+                {p.label}
+              </Paragraph>
+              <div
+                style={{
+                  marginTop: 6,
+                  padding: "12px 0",
+                  borderRadius: 12,
+                  background: palette.bg,
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: palette.ink,
+                }}
+              >
+                {p.name}
+              </div>
+              <Paragraph typography="t7" color={palette.primary} style={{ marginTop: 5 }}>
+                {p.god}
+              </Paragraph>
+              <Paragraph typography="t7" color={palette.sub}>
+                {p.stage}
+              </Paragraph>
+            </div>
+          ))}
+        </div>
+        {!profile.birthTime && (
+          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10 }}>
+            태어난 시간을 넣으면 시주까지 봐요.
+          </Paragraph>
+        )}
+      </Card>
+
+      {/* 오행 균형 */}
+      <Card style={{ marginTop: 12 }}>
+        <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
+          오행 분포
+        </Paragraph>
+        <div style={{ display: "flex", gap: 10, marginTop: 14, alignItems: "flex-end" }}>
+          {(Object.entries(saju.elementCount) as [Element, number][]).map(
+            ([el, n]) => (
+              <div key={el} style={{ flex: 1, textAlign: "center" }}>
+                <div
+                  style={{
+                    height: 70,
+                    display: "flex",
+                    alignItems: "flex-end",
+                    justifyContent: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "70%",
+                      height: `${maxCount === 0 ? 0 : (n / maxCount) * 100}%`,
+                      minHeight: n === 0 ? 3 : 10,
+                      borderRadius: 6,
+                      background: n === 0 ? palette.line : ELEMENT_COLOR[el],
+                    }}
+                  />
+                </div>
+                <Paragraph
+                  typography="t7"
+                  fontWeight="bold"
+                  color={n === 0 ? palette.sub : palette.ink}
+                  style={{ marginTop: 6 }}
+                >
+                  {el} {n}
+                </Paragraph>
+              </div>
+            ),
+          )}
+        </div>
+      </Card>
+
+      <div style={{ marginTop: 12 }}>
+        <BannerAd slot="saju_mid" />
+      </div>
+
+      {/* 풀이 본문 */}
+      {reading.sections.map((s) => (
+        <Card key={s.title} style={{ marginTop: 12 }}>
+          <Paragraph typography="t6" fontWeight="bold" color={palette.primary}>
+            {s.title}
+          </Paragraph>
+          <Paragraph
+            typography="t6"
+            color={palette.ink}
+            style={{ marginTop: 8, lineHeight: 1.7, whiteSpace: "pre-line" }}
+          >
+            {s.body.replace(/\*\*/g, "")}
+          </Paragraph>
+        </Card>
+      ))}
+
+      {/* 대운 흐름 */}
+      {reading.fortunes.length > 0 ? (
+        <Card style={{ marginTop: 12 }}>
+          <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
+            대운 흐름 (10년 주기)
+          </Paragraph>
+          <div style={{ display: "flex", gap: 6, marginTop: 12, overflowX: "auto" }}>
+            {reading.fortunes.map((f) => {
+              const on = f.startAge === reading.currentFortune?.startAge;
+              return (
+                <div
+                  key={f.startAge}
+                  style={{
+                    flexShrink: 0,
+                    minWidth: 58,
+                    textAlign: "center",
+                    padding: "10px 6px",
+                    borderRadius: 10,
+                    background: on ? palette.primary : palette.bg,
+                  }}
+                >
+                  <Paragraph
+                    typography="t7"
+                    color={on ? palette.white : palette.sub}
+                  >
+                    {f.startAge}세
+                  </Paragraph>
+                  <Paragraph
+                    typography="t6"
+                    fontWeight="bold"
+                    color={on ? palette.white : palette.ink}
+                    style={{ marginTop: 3 }}
+                  >
+                    {f.pillar.name}
+                  </Paragraph>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      ) : (
+        <Card style={{ marginTop: 12 }}>
+          <Paragraph typography="t7" color={palette.sub} style={{ lineHeight: 1.6 }}>
+            대운(10년 주기 흐름)은 성별에 따라 순행·역행이 갈려요. 성별을 넣으면
+            대운까지 볼 수 있어요.
+          </Paragraph>
+        </Card>
+      )}
+
+      <Paragraph
+        typography="t7"
+        color={palette.sub}
+        style={{ margin: "16px 4px 0", lineHeight: 1.5 }}
+      >
+        사주 풀이는 재미로 보는 참고 정보예요. 생년월일·시간은 이 기기에만 저장되고
+        서버로 보내지 않아요.
+      </Paragraph>
+    </ScreenLayout>
+  );
+}
+
+function AddPersonCard({
+  onSubmit,
+  onCancel,
+}: {
+  onSubmit: (
+    birthDate: string,
+    birthTime: string | undefined,
+    name: string,
+    gender: Gender | undefined,
+  ) => void;
+  onCancel: () => void;
+}) {
+  const [birthDate, setBirthDate] = useState("");
+  const [birthTime, setBirthTime] = useState("");
+  const [name, setName] = useState("");
+  const [gender, setGender] = useState<Gender | undefined>(undefined);
+  const { openToast } = useToast();
+
+  const preview =
+    birthDate.length === 10
+      ? (() => {
+          const s = computeSaju(birthDate, birthTime || undefined);
+          return `${s.year.name}년 ${s.month.name}월 ${s.day.name}일`;
+        })()
+      : null;
+
+  return (
+    <Card style={{ marginTop: 12 }}>
+      <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
+        사람 추가
+      </Paragraph>
+
+      <label style={labelStyle}>이름 · 별명</label>
+      <input
+        type="text"
+        value={name}
+        maxLength={10}
+        placeholder="예: 엄마, 김대리"
+        onChange={(e) => setName(e.target.value)}
+        style={inputStyle}
+      />
+
+      <label style={{ ...labelStyle, marginTop: 12 }}>생년월일</label>
+      <input
+        type="date"
+        value={birthDate}
+        max="2026-12-31"
+        min="1930-01-01"
+        onChange={(e) => setBirthDate(e.target.value)}
+        style={inputStyle}
+      />
+
+      <label style={{ ...labelStyle, marginTop: 12 }}>태어난 시간 (선택)</label>
+      <input
+        type="time"
+        value={birthTime}
+        onChange={(e) => setBirthTime(e.target.value)}
+        style={inputStyle}
+      />
+
+      <label style={{ ...labelStyle, marginTop: 12 }}>성별 (선택)</label>
+      <div style={{ display: "flex", gap: 8 }}>
+        {(["남", "여"] as const).map((g) => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => setGender(gender === g ? undefined : g)}
+            style={{
+              flex: 1,
+              padding: "11px 0",
+              borderRadius: 12,
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: "pointer",
+              border: `1px solid ${gender === g ? palette.primary : palette.line}`,
+              background: gender === g ? palette.primary : "#FBFAFF",
+              color: gender === g ? palette.white : palette.sub,
+            }}
+          >
+            {g}
+          </button>
+        ))}
+      </div>
+
+      {preview && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: "10px 14px",
+            borderRadius: 12,
+            background: palette.bg,
+            textAlign: "center",
+          }}
+        >
+          <Paragraph typography="t6" fontWeight="bold" color={palette.primary}>
+            {preview}
+          </Paragraph>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        <Button display="full" variant="weak" onClick={onCancel}>
+          취소
+        </Button>
+        <Button
+          display="full"
+          onClick={() => {
+            if (birthDate.length !== 10) {
+              openToast("생년월일을 입력해 주세요.");
+              return;
+            }
+            onSubmit(birthDate, birthTime || undefined, name.trim(), gender);
+          }}
+        >
+          📺 광고 보고 추가
+        </Button>
+      </div>
+      <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
+        추가한 사람의 생년월일도 이 기기에만 저장돼요.
+      </Paragraph>
+    </Card>
+  );
+}
+
+const labelStyle: React.CSSProperties = {
+  display: "block",
+  fontSize: 13,
+  fontWeight: 600,
+  color: palette.sub,
+  marginBottom: 6,
+  marginTop: 12,
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "12px 14px",
+  borderRadius: 12,
+  border: `1px solid ${palette.line}`,
+  fontSize: 16,
+  color: palette.ink,
+  background: "#FBFAFF",
+  outline: "none",
+};

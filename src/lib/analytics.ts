@@ -48,4 +48,5 @@ export const EVENT = {
   streakMilestone: "streak_milestone",
   streakSaved: "streak_saved",
   detailUnlocked: "detail_unlocked",
+  personAdded: "person_added",
 } as const;

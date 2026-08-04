@@ -5,6 +5,7 @@ import "./App.css";
 import { BottomNav } from "./components/BottomNav";
 import { HomeScreen } from "./features/home/HomeScreen";
 import { OnboardingScreen } from "./features/onboarding/OnboardingScreen";
+import { SajuScreen } from "./features/saju/SajuScreen";
 import { StatsScreen } from "./features/stats/StatsScreen";
 import { VerifyScreen } from "./features/verify/VerifyScreen";
 import { trackScreen } from "./lib/analytics";
@@ -13,7 +14,7 @@ import { RouterProvider, useRouter, type Route, type RouteName } from "./router"
 import { StateProvider, useAppState } from "./state";
 import { palette } from "./theme";
 
-const TAB_SCREENS: RouteName[] = ["home", "verify", "stats"];
+const TAB_SCREENS: RouteName[] = ["home", "saju", "verify", "stats"];
 
 function CurrentScreen() {
   const { route } = useRouter();
@@ -29,6 +30,8 @@ function CurrentScreen() {
       return <HomeScreen />;
     case "verify":
       return <VerifyScreen />;
+    case "saju":
+      return <SajuScreen />;
     case "stats":
       return <StatsScreen />;
     default:
@@ -90,7 +93,9 @@ function initialRoute(): Route {
     const screen =
       new URLSearchParams(search).get("screen") ??
       pathname.split("/").filter(Boolean).pop();
-    if (screen === "verify" || screen === "stats") return { name: screen };
+    if (screen === "verify" || screen === "stats" || screen === "saju") {
+      return { name: screen };
+    }
   } catch {
     /* noop */
   }

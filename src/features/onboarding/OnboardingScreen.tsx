@@ -4,6 +4,7 @@ import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import { requestNotifyConsent } from "../../data/notify";
+import { type Gender } from "../../data/saju";
 import { starSignOf, zodiacOf } from "../../data/zodiac";
 import { EVENT, track } from "../../lib/analytics";
 import { useRouter } from "../../router";
@@ -24,6 +25,7 @@ export function OnboardingScreen() {
   const [birthDate, setBirthDate] = useState("");
   const [birthTime, setBirthTime] = useState("");
   const [nickname, setNickname] = useState("");
+  const [gender, setGender] = useState<Gender | undefined>(undefined);
   const [busy, setBusy] = useState(false);
 
   const preview =
@@ -39,7 +41,7 @@ export function OnboardingScreen() {
     }
     setBusy(true);
     try {
-      saveProfile(birthDate, birthTime, nickname.trim());
+      saveProfile(birthDate, birthTime, nickname.trim(), gender);
       track(EVENT.onboardingComplete, {});
       track(EVENT.signup, { method: "guest" });
       // 아침 운세 / 밤 검증 알림 동의 (토스 앱에서만 동작)
@@ -94,6 +96,33 @@ export function OnboardingScreen() {
           onChange={(e) => setBirthTime(e.target.value)}
           style={inputStyle}
         />
+
+        {/* 대운(10년 주기)은 양남·음녀 순행 / 음남·양녀 역행이라 성별이 있어야 계산돼요 */}
+        <label style={{ ...labelStyle, marginTop: 12 }}>
+          성별 (선택 · 대운 계산에 필요)
+        </label>
+        <div style={{ display: "flex", gap: 8 }}>
+          {(["남", "여"] as const).map((g) => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => setGender(gender === g ? undefined : g)}
+              style={{
+                flex: 1,
+                padding: "12px 0",
+                borderRadius: 12,
+                fontSize: 15,
+                fontWeight: 600,
+                cursor: "pointer",
+                border: `1px solid ${gender === g ? palette.primary : palette.line}`,
+                background: gender === g ? palette.primary : "#FBFAFF",
+                color: gender === g ? palette.white : palette.sub,
+              }}
+            >
+              {g}
+            </button>
+          ))}
+        </div>
 
         <label style={{ ...labelStyle, marginTop: 12 }}>닉네임 (선택)</label>
         <input

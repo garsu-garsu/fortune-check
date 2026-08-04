@@ -12,6 +12,7 @@ export type Route =
   | { name: "onboarding" }
   | { name: "home" } // 오늘의 운세
   | { name: "verify" } // 밤 O/X 검증
+  | { name: "saju" } // 사주 원국 풀이 (사람 전환 포함)
   | { name: "stats" }; // 적중률 통계 + 전국 랭킹
 
 export type RouteName = Route["name"];

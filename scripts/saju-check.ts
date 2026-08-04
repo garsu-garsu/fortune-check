@@ -12,6 +12,7 @@ import {
   climateOf,
   computeSaju,
   hiddenStemsOf,
+  majorFortuneStartAge,
   majorFortunesOf,
   principalStemOf,
   stemCombineElement,
@@ -340,11 +341,11 @@ assert.equal(tenGodOf("화", "금"), "재성"); // 화극금
   assert.equal(climateOf(3), "온화"); // 묘월(3월)
 }
 
-// ── 대운 — 방향과 간격 ──
+// ── 대운 — 방향, 간격, 대운수 ──
 {
   const s = computeSaju("1990-05-15");
-  const male = majorFortunesOf(s, "남");
-  const female = majorFortunesOf(s, "여");
+  const male = majorFortunesOf(s, "남", "1990-05-15");
+  const female = majorFortunesOf(s, "여", "1990-05-15");
   assert.equal(male.length, 8);
   // 10년 간격
   for (let i = 1; i < male.length; i++) {
@@ -359,6 +360,28 @@ assert.equal(tenGodOf("화", "금"), "재성"); // 화극금
       male[0].pillar.stem === (monthIdx + 9) % 10,
     "첫 대운이 월주 인접이 아니에요",
   );
+
+  // 대운수는 1~10 이어야 해요 (절기 간격 약 30일 ÷ 3)
+  for (const b of [
+    "1988-03-14", "1995-11-02", "1979-07-23", "2001-01-09",
+    "1969-09-30", "1990-05-15", "2004-02-04", "1975-12-31",
+  ]) {
+    for (const g of ["남", "여"] as const) {
+      const age = majorFortunesOf(computeSaju(b), g, b)[0].startAge;
+      assert.ok(age >= 1 && age <= 10, `${b} ${g} 대운수 ${age} — 범위 밖`);
+    }
+  }
+
+  // 같은 사주에서 순행 대운수 + 역행 대운수 ≈ 그 절기 구간 길이(약 30일)/3 ≈ 10
+  // (경계에 딱 걸리지 않는 한 두 값의 합은 9~11 사이)
+  for (const b of ["1988-03-14", "1995-11-02", "1990-05-15"]) {
+    const fwd = majorFortuneStartAge(b, undefined, true);
+    const bwd = majorFortuneStartAge(b, undefined, false);
+    assert.ok(
+      fwd + bwd >= 9 && fwd + bwd <= 11,
+      `${b} 순행+역행 대운수 = ${fwd}+${bwd}`,
+    );
+  }
 }
 
 // ── 세운 ──

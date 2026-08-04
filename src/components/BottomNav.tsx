@@ -11,6 +11,7 @@ interface Tab {
 
 const TABS: Tab[] = [
   { name: "home", label: "오늘운세", emoji: "🔮" },
+  { name: "saju", label: "사주풀이", emoji: "🧭" },
   { name: "verify", label: "검증", emoji: "✅" },
   { name: "stats", label: "통계", emoji: "📊" },
 ];

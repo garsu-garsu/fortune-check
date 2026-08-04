@@ -642,20 +642,68 @@ export interface Fortune10 {
 }
 
 /**
- * 대운 목록(8개 = 80년치)을 만들어요.
- * 대운수(시작 나이)는 절기까지의 날수를 3으로 나눈 정통 방식 대신,
- * 생일이 속한 절기 구간의 진행률로 근사해요.
- * ponytail: 절입 시각까지의 실일수 계산은 생시가 있어야 의미가 커요.
- *           생시 미입력이 많아 근사로 둡니다.
+ * 절입(節入) 시각을 찾아요. 월지가 바뀌는 경계는 황경 315° + 30°k 지점이에요.
+ * @param next true면 이 시점 이후 첫 절입, false면 이 시점이 속한 절기의 시작
+ */
+function termBoundaryMs(utcMs: number, next: boolean): number {
+  const lambda = solarLongitude(utcMs);
+  const k = Math.floor(((((lambda - 315) % 360) + 360) % 360) / 30);
+  const target = (315 + 30 * (next ? k + 1 : k)) % 360;
+  // 목표 황경과의 부호 있는 차이. 40일 구간에선 황경이 ~40° 움직이므로
+  // ±180 안에 머물러 단조 증가해요.
+  const g = (t: number) => (((solarLongitude(t) - target + 540) % 360) - 180);
+  const DAY = 86400000;
+  let lo = next ? utcMs : utcMs - 40 * DAY;
+  let hi = next ? utcMs + 40 * DAY : utcMs;
+  for (let i = 0; i < 50; i++) {
+    const mid = (lo + hi) / 2;
+    if (g(mid) < 0) lo = mid;
+    else hi = mid;
+  }
+  return hi;
+}
+
+/**
+ * 대운수 — 대운이 시작되는 나이.
+ * 순행이면 생일부터 다음 절입까지, 역행이면 이전 절입부터 생일까지의
+ * 날수를 3으로 나눠요(3일 = 1년). 최소 1.
+ */
+export function majorFortuneStartAge(
+  birthDate: string,
+  birthTime: string | undefined,
+  forward: boolean,
+): number {
+  const y = Number(birthDate.slice(0, 4));
+  const m = Number(birthDate.slice(5, 7));
+  const d = Number(birthDate.slice(8, 10));
+  const hh = birthTime ? Number(birthTime.slice(0, 2)) : 12;
+  const mm = birthTime ? Number(birthTime.slice(3, 5)) : 0;
+  const birth = Date.UTC(y, m - 1, d, hh - 9, mm); // KST → UTC
+
+  const boundary = termBoundaryMs(birth, forward);
+  const days = Math.abs(boundary - birth) / 86400000;
+  return Math.max(1, Math.round(days / 3));
+}
+
+/** 양남·음녀는 순행, 음남·양녀는 역행 */
+export function fortuneDirectionOf(saju: Saju, gender: Gender): boolean {
+  const yearIsYang = isYangStem(saju.year.stem);
+  return (yearIsYang && gender === "남") || (!yearIsYang && gender === "여");
+}
+
+/**
+ * 대운 목록(기본 8개 = 80년치). 월주에서 출발해 순행/역행해요.
+ * 시작 나이는 절입까지의 실제 날수로 계산한 대운수예요.
  */
 export function majorFortunesOf(
   saju: Saju,
   gender: Gender,
+  birthDate: string,
+  birthTime?: string,
   count = 8,
 ): Fortune10[] {
-  const yearIsYang = isYangStem(saju.year.stem);
-  const forward = (yearIsYang && gender === "남") || (!yearIsYang && gender === "여");
-  const startAge = forward ? 3 : 7; // 근사: 순행은 이르게, 역행은 늦게 시작
+  const forward = fortuneDirectionOf(saju, gender);
+  const startAge = majorFortuneStartAge(birthDate, birthTime, forward);
   const out: Fortune10[] = [];
   for (let i = 1; i <= count; i++) {
     const step = forward ? i : -i;
