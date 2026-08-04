@@ -10,6 +10,7 @@ import {
   branchHarmOf,
   branchRelationOf,
   climateOf,
+  koreaOffsetMinutes,
   computeSaju,
   hiddenStemsOf,
   majorFortuneStartAge,
@@ -292,6 +293,53 @@ assert.equal(tenGodOf("화", "금"), "재성"); // 화극금
   }
   assert.equal(stemRelationOf(4, 0), "없음"); // 무갑 — 토는 충 없음
   assert.equal(stemRelationOf(5, 1), "없음"); // 기을
+
+  // 100쌍 전수 — 예전엔 a<b 인 6쌍만 봐서 비대칭 버그를 통째로 놓쳤어요.
+  // (경갑을 "없음", 경병을 "충"이라 답하고 있었음)
+  for (let a = 0; a < 10; a++) {
+    for (let b = 0; b < 10; b++) {
+      const expected =
+        Math.abs(a - b) === 6
+          ? "충"
+          : ((b - a) % 10 + 10) % 10 === 5
+            ? "합"
+            : "없음";
+      assert.equal(
+        stemRelationOf(a, b),
+        expected,
+        `${STEMS[a]}${STEMS[b]}`,
+      );
+    }
+  }
+  // 충·합은 방향에 관계없이 같아야 해요
+  for (let a = 0; a < 10; a++) {
+    for (let b = 0; b < 10; b++) {
+      assert.equal(
+        stemRelationOf(a, b),
+        stemRelationOf(b, a),
+        `${STEMS[a]}${STEMS[b]} 대칭`,
+      );
+    }
+  }
+}
+
+// ── 한국 표준시 이력 — 시주가 걸린 문제라 사실 확인이 필요해요 ──
+{
+  assert.equal(koreaOffsetMinutes("1950-01-01"), 540); // UTC+9
+  assert.equal(koreaOffsetMinutes("1954-03-21"), 510); // UTC+8:30 시작
+  assert.equal(koreaOffsetMinutes("1960-06-15"), 510);
+  assert.equal(koreaOffsetMinutes("1961-08-09"), 510); // 마지막 날
+  assert.equal(koreaOffsetMinutes("1961-08-10"), 540); // 복귀
+  assert.equal(koreaOffsetMinutes("1987-07-01"), 600); // 서머타임 UTC+10
+  assert.equal(koreaOffsetMinutes("1988-07-01"), 600);
+  assert.equal(koreaOffsetMinutes("1989-07-01"), 540); // 서머타임 폐지 후
+  assert.equal(koreaOffsetMinutes("2026-08-04"), 540);
+
+  // UTC+8:30 이던 시기엔 시지가 한 칸 달라질 수 있어요.
+  // 1960-06-15 01:10 KST(=UTC+8:30) → UTC 16:40 전날 → 실제 시각 기준 축시.
+  // 전 기간 UTC+9로 계산하면 같은 입력이 다른 시지로 떨어져요.
+  const withHistory = computeSaju("1960-06-15", "01:10");
+  assert.ok(withHistory.hour !== null);
 }
 
 // ── 형·파·해 ──

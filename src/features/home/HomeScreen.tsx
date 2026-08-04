@@ -89,16 +89,15 @@ export function HomeScreen() {
     }, `detail_${cat}`);
   };
 
-  // 공유는 보상형 광고를 본 뒤 실행(공유 여부와 무관하게 광고 수익 확보)
+  // 공유에는 광고를 걸지 않아요. 유일한 바이럴 동선인데 광고로 막으면
+  // 광고를 보고도 얻는 게 없어 손해만 남아요.
   const onShareToday = (overallScore: number) => {
-    watchThen(() => {
-      void (async () => {
-        const ok = await shareApp(
-          `오늘의 종합운 ${overallScore}점! 내 운세 적중률 쌓는 중`,
-        );
-        if (ok) track(EVENT.shareCompleted, { context: "today_card" });
-      })();
-    }, "share_today");
+    void (async () => {
+      const ok = await shareApp(
+        `오늘의 종합운 ${overallScore}점! 내 운세 적중률 쌓는 중`,
+      );
+      if (ok) track(EVENT.shareCompleted, { context: "today_card" });
+    })();
   };
 
   const renderDetail = (meta: CategoryMeta) => {
@@ -267,7 +266,7 @@ export function HomeScreen() {
         </Paragraph>
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
           <Button display="full" variant="weak" onClick={() => onShareToday(overall.score)}>
-            📺 광고 보고 공유
+            친구에게 공유
           </Button>
           <Button display="full" onClick={() => navigate({ name: "verify" })}>
             검증하러 가기

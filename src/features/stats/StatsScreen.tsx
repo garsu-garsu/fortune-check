@@ -12,7 +12,6 @@ import {
 import { shareApp } from "../../data/share";
 import { EVENT, track } from "../../lib/analytics";
 import { kstDate, kstMonth } from "../../lib/kst";
-import { useAdGate } from "../../hooks/useAdGate";
 import { useAppState } from "../../state";
 import { palette } from "../../theme";
 
@@ -32,7 +31,6 @@ const MIN_FOR_INSIGHT = 5;
 
 export function StatsScreen() {
   const { me: profile, allChecks, streak } = useAppState();
-  const { watchThen } = useAdGate();
   const [ranking, setRanking] = useState<ZodiacRank[]>([]);
   const [live, setLive] = useState(false);
 
@@ -121,16 +119,14 @@ export function StatsScreen() {
       ? ranking.findIndex((r) => r.zodiac === profile.zodiac) + 1
       : 0;
 
-  // 공유는 보상형 광고를 본 뒤 실행(공유 여부와 무관하게 광고 수익 확보)
+  // 공유에는 광고를 걸지 않아요(유일한 바이럴 동선이라).
   const shareMonthly = () => {
-    watchThen(() => {
-      void (async () => {
-        const ok = await shareApp(
-          `${month.replace("-", "년 ")}월 내 운세 적중률 ${totalRate}% (${monthChecks.length}회 검증)`,
-        );
-        if (ok) track(EVENT.shareCompleted, { context: "monthly_card" });
-      })();
-    }, "share_monthly");
+    void (async () => {
+      const ok = await shareApp(
+        `${month.replace("-", "년 ")}월 내 운세 적중률 ${totalRate}% (${monthChecks.length}회 검증)`,
+      );
+      if (ok) track(EVENT.shareCompleted, { context: "monthly_card" });
+    })();
   };
 
   return (
@@ -158,10 +154,13 @@ export function StatsScreen() {
           color={palette.gold}
           style={{ fontSize: 52, lineHeight: 1.1, margin: "6px 0" }}
         >
-          {totalRate}%
+          {/* 검증이 하나도 없을 때 큰 "0%"는 실패로 읽혀요. 데이터 없음과 구분해요. */}
+          {monthChecks.length === 0 ? "–" : `${totalRate}%`}
         </Paragraph>
         <Paragraph typography="t7" color={palette.white} style={{ opacity: 0.85 }}>
-          {monthChecks.length}회 검증 · 🔥 연속 {streak}일
+          {monthChecks.length === 0
+            ? "아직 검증한 날이 없어요"
+            : `${monthChecks.length}회 검증 · 🔥 연속 ${streak}일`}
         </Paragraph>
       </Card>
 
@@ -375,7 +374,7 @@ export function StatsScreen() {
 
       <div style={{ marginTop: 16 }}>
         <Button display="full" variant="weak" onClick={shareMonthly}>
-          📺 광고 보고 월간 카드 공유
+          월간 카드 공유하기
         </Button>
       </div>
     </ScreenLayout>

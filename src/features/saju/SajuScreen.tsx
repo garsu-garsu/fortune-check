@@ -240,10 +240,18 @@ export function SajuScreen() {
             </div>
           ))}
         </div>
+        {/* 표 아래 두 줄이 무엇인지 어디에도 없었어요 — 이 화면의 대표 표인데
+            첫 사용자에겐 한자 나열로만 보였어요. */}
+        <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 12, lineHeight: 1.5 }}>
+          가운데 줄은 십성(사회에서 드러나는 역할), 아래 줄은 십이운성(그 자리 기운의
+          세기)이에요.
+        </Paragraph>
         {!profile.birthTime && (
-          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10 }}>
-            태어난 시간을 넣으면 시주까지 봐요.
-          </Paragraph>
+          <div style={{ marginTop: 12 }}>
+            <Button display="full" variant="weak" onClick={() => setEditing(true)}>
+              태어난 시간 넣고 시주 보기
+            </Button>
+          </div>
         )}
       </Card>
 
@@ -303,7 +311,7 @@ export function SajuScreen() {
             color={palette.ink}
             style={{ marginTop: 8, lineHeight: 1.7, whiteSpace: "pre-line" }}
           >
-            {s.body.replace(/\*\*/g, "")}
+            {s.body}
           </Paragraph>
         </Card>
       ))}
@@ -351,9 +359,14 @@ export function SajuScreen() {
       ) : (
         <Card style={{ marginTop: 12 }}>
           <Paragraph typography="t7" color={palette.sub} style={{ lineHeight: 1.6 }}>
-            대운(10년 주기 흐름)은 성별에 따라 순행·역행이 갈려요. 성별을 넣으면
-            대운까지 볼 수 있어요.
+            대운은 10년마다 바뀌는 큰 흐름이에요. 남녀에 따라 흐르는 방향이 달라서,
+            성별을 넣어야 볼 수 있어요.
           </Paragraph>
+          <div style={{ marginTop: 12 }}>
+            <Button display="full" variant="weak" onClick={() => setEditing(true)}>
+              성별 넣고 대운 보기
+            </Button>
+          </div>
         </Card>
       )}
 

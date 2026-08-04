@@ -5,8 +5,10 @@
 //  - 일주: 오차 없음(60갑자 순환은 결정적).
 //  - 년주/월주: 절기 경계를 태양 황경으로 계산 → 실제 절입 시각과 수십 분 이내.
 //  - 시주: 생시를 입력한 경우만. 진태양시 보정은 안 해요(경도차 ~30분).
-// ponytail: 야자시(23~24시를 다음날로 보는 유파)는 채택 안 함 — KST 자정 기준.
-//           유파 분기를 지원하려면 dayPillar에 옵션 추가.
+// 자시(子時) 유파: 일주는 KST 자정에 바뀌어요. 23~24시 출생은 그날 일간을
+// 유지하고 시지만 자시가 돼요 — 이게 야자시설(夜子時)이에요.
+// 자시일수설(23시부터 다음날 일주)을 쓰면 일간 자체가 달라져요.
+// 유파 분기를 지원하려면 computeSaju 에 옵션 추가.
 
 export const STEMS = [
   "갑", "을", "병", "정", "무", "기", "경", "신", "임", "계",
@@ -58,6 +60,26 @@ export interface Saju {
 }
 
 const RAD = Math.PI / 180;
+
+/**
+ * 한국 표준시는 늘 UTC+9가 아니었어요. 시주는 2시간 단위라 30~60분 오차면
+ * 시지가 한 칸 밀려요(= 다른 시주). 유파 문제가 아니라 시계에 관한 사실이에요.
+ *  - 1954-03-21 ~ 1961-08-09 : UTC+8:30
+ *  - 1987·1988 여름 서머타임  : UTC+10
+ */
+const KST_HISTORY: { from: string; to: string; minutes: number }[] = [
+  { from: "1954-03-21", to: "1961-08-09", minutes: 8.5 * 60 },
+  { from: "1987-05-10", to: "1987-10-11", minutes: 10 * 60 },
+  { from: "1988-05-08", to: "1988-10-09", minutes: 10 * 60 },
+];
+
+/** 그 날짜에 한국에서 쓰던 표준시 오프셋(분) */
+export function koreaOffsetMinutes(date: string): number {
+  for (const r of KST_HISTORY) {
+    if (date >= r.from && date <= r.to) return r.minutes;
+  }
+  return 9 * 60;
+}
 
 function pillar(stem: number, branch: number): Pillar {
   return { stem, branch, name: STEMS[stem] + BRANCHES[branch] };
@@ -134,7 +156,9 @@ export function computeSaju(birthDate: string, birthTime?: string): Saju {
   // 절기 판정은 KST 정오 기준(생시를 모르는 경우의 관례).
   const hour = birthTime ? Number(birthTime.slice(0, 2)) : 12;
   const minute = birthTime ? Number(birthTime.slice(3, 5)) : 0;
-  const utcMs = Date.UTC(y, m - 1, d, hour - 9, minute); // KST = UTC+9
+  const utcMs =
+    Date.UTC(y, m - 1, d, hour, minute) -
+    koreaOffsetMinutes(birthDate) * 60000;
 
   // 년주 — 입춘 이전이면 전년도
   const sajuYear = utcMs < ipchunMs(y) ? y - 1 : y;
@@ -510,8 +534,10 @@ export function strengthOf(saju: Saju): Strength {
     (h) => h.weight >= 0.5 && supportsMe(me, h.stem),
   );
   const supportRatio = total === 0 ? 0 : support / total;
-  // 월지가 무거우므로 득령 여부를 판정에 한 번 더 반영해요
-  const score = supportRatio + (hasSeason ? 0.15 : -0.15);
+  // 월지가 무거우므로 득령을 한 번 더 반영하되, 보너스 폭을 중화 밴드보다
+  // 좁게 둬요. ±0.15(스윙 0.30)는 중화 밴드(0.20)보다 넓어서 판정이 사실상
+  // 득령 하나로 결정되고 득지·득세가 죽어버려요.
+  const score = supportRatio + (hasSeason ? 0.07 : -0.07);
 
   return {
     verdict: score >= 0.55 ? "신강" : score <= 0.35 ? "신약" : "중화",
@@ -548,11 +574,6 @@ export function climateNeedOf(saju: Saju): Element[] {
  * 실제 명리도 조후가 급하면 조후를 우선해요.
  */
 export function usefulElementsOfV2(saju: Saju): Element[] {
-  const climate = climateNeedOf(saju);
-  // 조후가 급한데 원국에 그 오행이 부족하면 그게 1순위 용신
-  const urgent = climate.filter((el) => saju.elementCount[el] <= 1);
-  if (urgent.length > 0) return urgent;
-
   const s = strengthOf(saju);
   const wanted: TenGod[] =
     s.verdict === "신강"
@@ -560,7 +581,17 @@ export function usefulElementsOfV2(saju: Saju): Element[] {
       : s.verdict === "신약"
         ? ["비겁", "인성"]
         : ["재성", "관성"];
-  return ORDER.filter((el) => wanted.includes(tenGodOf(saju.dayElement, el)));
+  const balance = ORDER.filter((el) =>
+    wanted.includes(tenGodOf(saju.dayElement, el)),
+  );
+
+  // 조후는 '우선 고려'지 '단독 결정'이 아니에요.
+  // 예전엔 조후가 급하면 억부를 통째로 건너뛰어서, 재다신약 사주에게
+  // 재성을 용신이라고 말하는 일이 생겼어요. 이제 앞에 세우되 억부를 남겨요.
+  const urgent = climateNeedOf(saju).filter(
+    (el) => saju.elementCount[el] <= 1 && !balance.includes(el),
+  );
+  return [...urgent, ...balance];
 }
 
 // ── 천간 합·충 ───────────────────────────────────────────────────
@@ -570,11 +601,11 @@ export function usefulElementsOfV2(saju: Saju): Element[] {
 export type StemRelation = "합" | "충" | "없음";
 
 export function stemRelationOf(a: number, b: number): StemRelation {
-  const diff = ((b - a) % 10 + 10) % 10;
-  if (diff === 5) return "합";
-  if (diff === 6 && STEM_ELEMENTS[a] !== "토" && STEM_ELEMENTS[b] !== "토") {
-    return "충";
-  }
+  // 충은 "거리 6"이라 대칭이에요. mod-10 단방향 오프셋으로 재면 비대칭이 되어
+  // 경갑(충)을 놓치고 경병(충 아님)을 충이라 답해요.
+  // 거리 6짝은 갑경·을신·병임·정계뿐이라 토 예외 처리도 필요 없어요.
+  if (Math.abs(a - b) === 6) return "충";
+  if (((b - a) % 10 + 10) % 10 === 5) return "합";
   return "없음";
 }
 
@@ -678,7 +709,8 @@ export function majorFortuneStartAge(
   const d = Number(birthDate.slice(8, 10));
   const hh = birthTime ? Number(birthTime.slice(0, 2)) : 12;
   const mm = birthTime ? Number(birthTime.slice(3, 5)) : 0;
-  const birth = Date.UTC(y, m - 1, d, hh - 9, mm); // KST → UTC
+  const birth =
+    Date.UTC(y, m - 1, d, hh, mm) - koreaOffsetMinutes(birthDate) * 60000;
 
   const boundary = termBoundaryMs(birth, forward);
   const days = Math.abs(boundary - birth) / 86400000;

@@ -9,6 +9,7 @@
 import {
   BRANCHES,
   STEMS,
+  branchElement,
   climateOf,
   currentFortune10,
   fortuneDirectionOf,
@@ -232,15 +233,17 @@ export function readSaju(
     const s = sinsalOf(base, b);
     if (s) found.add(s);
   }
-  for (const s of found) marks.push(`**${s}** ${SINSAL_READING[s]}`);
+  // 용어와 뜻 사이에 구분선을 둬요. 예전엔 굵게 표시만 하고 화면에서 그걸
+  // 지워서 "도화 사람을 끄는 기운이 있어요" 처럼 한 문장으로 붙어버렸어요.
+  for (const s of found) marks.push(`${s} — ${SINSAL_READING[s]}`);
   if (branches.some((b) => isNobleman(saju.dayStem, b))) {
-    marks.push("**천을귀인** 어려울 때 도와주는 사람이 나타나는 자리예요. 사람 복이 있는 편이에요.");
+    marks.push("천을귀인 — 어려울 때 도와주는 사람이 나타나는 자리예요. 사람 복이 있는 편이에요.");
   }
   const [v1, v2] = voidBranchesOf(saju.day);
   marks.push(
-    `**공망** ${BRANCHES[v1]}·${BRANCHES[v2]}. 이 기운이 오는 자리는 결과가 더디게 맺혀요. 조급해하지 않으면 오히려 편한 자리예요.`,
+    `공망 — ${BRANCHES[v1]}·${BRANCHES[v2]} 자리. 이 기운이 오는 자리는 결과가 더디게 맺혀요. 조급해하지 않으면 오히려 편한 자리예요.`,
   );
-  sections.push({ title: "신살", body: marks.join("\n\n") });
+  sections.push({ title: "타고난 기운 (신살)", body: marks.join("\n\n") });
 
   // ── 대운 ──
   const fortunes = gender
@@ -252,15 +255,27 @@ export function readSaju(
   if (gender && current) {
     const dir = fortuneDirectionOf(saju, gender) ? "순행" : "역행";
     const curGod = tenGodFullOf(saju.dayStem, current.pillar.stem);
-    const isGood = useful.includes(stemElement(current.pillar.stem));
+    // 대운은 천간 5년 / 지지 5년이고, 대개 지지를 더 무겁게 봐요.
+    // 천간만 보면 판정이 뒤집혀요 — 갑신 대운을 '반갑지 않다'고 하는데
+    // 정작 申은 용신 수(水)의 장생지인 식이죠.
+    const stemGood = useful.includes(stemElement(current.pillar.stem));
+    const branchGood =
+      useful.includes(branchElement(current.pillar.branch)) ||
+      useful.includes(stemElement(principalStemOf(current.pillar.branch)));
+    const isGood = branchGood || stemGood;
+    const bothGood = branchGood && stemGood;
     sections.push({
       title: `현재 대운 ${current.pillar.name} (${current.startAge}세~)`,
       body:
         `대운은 10년마다 바뀌는 큰 흐름이에요. ${dir}으로 흘러요.\n\n` +
         `지금은 ${curGod}의 대운이에요. ${TEN_GOD_LIFE[curGod]}\n\n` +
-        (isGood
-          ? "나에게 반가운 기운이 들어와 있는 시기라, 벌여둔 일이 결과로 이어지기 좋아요."
-          : "반가운 기운은 아니라 속도가 더디게 느껴질 수 있어요. 확장보다 다지는 데 쓰면 다음 대운에서 크게 돌아와요."),
+        (bothGood
+          ? "천간과 지지 모두 나에게 반가운 기운이라, 벌여둔 일이 결과로 이어지기 좋은 시기예요."
+          : isGood
+            ? (branchGood
+                ? "겉으로는 더디게 느껴져도 밑자리(지지)가 나를 돕는 시기예요. 티는 덜 나도 쌓이는 게 있어요."
+                : "드러나는 자리는 반가운데 밑자리가 받쳐주지 않아요. 벌이기보다 한 가지를 끝까지 붙드는 편이 나아요.")
+            : "반가운 기운은 아니라 속도가 더디게 느껴질 수 있어요. 확장보다 다지는 데 쓰면 다음 대운에서 크게 돌아와요."),
     });
   }
 
