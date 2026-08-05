@@ -197,6 +197,15 @@ export function StatsScreen() {
         </Paragraph>
       </Card>
 
+      {/* 공유는 적중률을 본 직후가 가장 잘 눌려요 — 화면 맨 아래에 두면 안 보여요 */}
+      {monthChecks.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <Button display="full" onClick={shareMonthly}>
+            📤 이번 달 적중률 {totalRate}% 자랑하기
+          </Button>
+        </div>
+      )}
+
       {/* 이번 주 리포트 */}
       <Card style={{ marginTop: 12 }}>
         <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
@@ -471,11 +480,6 @@ export function StatsScreen() {
         </div>
       </Card>
 
-      <div style={{ marginTop: 16 }}>
-        <Button display="full" variant="weak" onClick={shareMonthly}>
-          월간 카드 공유하기
-        </Button>
-      </div>
     </ScreenLayout>
   );
 }

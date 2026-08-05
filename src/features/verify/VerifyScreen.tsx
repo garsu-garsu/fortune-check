@@ -10,6 +10,7 @@ import {
   type CheckKind,
 } from "../../data/fortune";
 import { retryNotifyConsentOnce } from "../../data/notify";
+import { shareApp } from "../../data/share";
 import { EVENT, track } from "../../lib/analytics";
 import { askReviewOnce } from "../../lib/review";
 import { useAdGate } from "../../hooks/useAdGate";
@@ -45,6 +46,16 @@ export function VerifyScreen() {
       track(EVENT.streakSaved, { saved_streak: atRiskStreak });
       openToast(`연속 ${atRiskStreak}일 기록을 지켰어요!`);
     }, "streak_save");
+  };
+
+  // 공유에는 광고를 걸지 않아요 — 유일한 바이럴 동선이라.
+  const onShareToday = () => {
+    void (async () => {
+      const ok = await shareApp(
+        `오늘 운세 검증 끝! 🔥 연속 ${streak}일째 적중률 쌓는 중`,
+      );
+      if (ok) track(EVENT.shareCompleted, { context: "verify_done" });
+    })();
   };
 
   if (!profile) return null;
@@ -275,9 +286,13 @@ export function VerifyScreen() {
       )}
 
       {allDone && (
-        <div style={{ marginTop: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
           <Button display="full" onClick={() => navigate({ name: "stats" })}>
             내 적중률 보러 가기 📊
+          </Button>
+          {/* 오늘 검증을 막 끝낸 지금이 자랑하고 싶은 순간이에요 */}
+          <Button display="full" variant="weak" onClick={onShareToday}>
+            📤 오늘 검증 결과 공유하기
           </Button>
         </div>
       )}
