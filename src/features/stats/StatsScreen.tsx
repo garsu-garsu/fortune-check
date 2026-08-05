@@ -325,7 +325,10 @@ export function StatsScreen() {
             >
               지금까지 {insight.total}번 검증한 결과, <b>{insight.best.label}</b>이(가){" "}
               <b>{rate(insight.best.hit, insight.best.total)}%</b>로 가장 잘 맞았어요.
-              {insight.worst && insight.worst.label !== insight.best.label && (
+              {insight.worst &&
+                insight.worst.label !== insight.best.label &&
+                rate(insight.worst.hit, insight.worst.total) !==
+                  rate(insight.best.hit, insight.best.total) && (
                 <>
                   {" "}반대로 {insight.worst.label}은(는){" "}
                   {rate(insight.worst.hit, insight.worst.total)}%로 잘 안 맞는 편이에요.

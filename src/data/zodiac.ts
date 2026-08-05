@@ -1,5 +1,8 @@
 // 생년월일 → 띠(12지) / 별자리(12궁) 산출.
-// (음력 설 경계는 MVP에서 단순화 — 양력 연/월/일 기준. 정통 만세력은 2차.)
+// 띠는 사주 년주(입춘 기준)에서 뽑아요 — 별자리만 양력 월/일 기준이에요.
+
+// 확장자를 붙여야 scripts/*.ts 가 node --experimental-strip-types 로 이 파일을 읽어요.
+import { computeSaju } from "./saju.ts";
 
 export interface Zodiac {
   name: string; // 예: "말띠"
@@ -25,9 +28,14 @@ const ANIMALS: Zodiac[] = [
   { name: "양띠", emoji: "🐑" },
 ];
 
+/**
+ * 띠 — 사주 년주의 지지예요. 양력 연도가 아니라 **입춘(立春)** 이 경계라
+ * 1/1~입춘 출생자는 전년도 띠가 돼요(전체의 약 9%). 사주 카드와 어긋나면
+ * 같은 화면에서 띠가 둘로 갈려요.
+ */
 export function zodiacOf(birthDate: string): Zodiac {
-  const year = Number(birthDate.slice(0, 4));
-  return ANIMALS[((year % 12) + 12) % 12];
+  const z = ZODIAC_PICK[computeSaju(birthDate).year.branch];
+  return { name: `${z.name}띠`, emoji: z.emoji };
 }
 
 /**

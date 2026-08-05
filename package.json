@@ -11,10 +11,12 @@
     "typecheck": "tsc -b --force",
     "format": "prettier --write .",
     "check:saju": "node --experimental-strip-types scripts/saju-check.ts",
+    "check:daewoon": "node --experimental-strip-types scripts/daewoon-check.ts",
     "check:growth": "node --experimental-strip-types scripts/growth-check.ts",
     "check:repeat": "node --experimental-strip-types scripts/repeat-check.ts",
     "check:teaser": "node --experimental-strip-types scripts/teaser-check.ts",
-    "check:preview": "node --experimental-strip-types scripts/preview-check.ts"
+    "check:preview": "node --experimental-strip-types scripts/preview-check.ts",
+    "check:state": "node --experimental-strip-types scripts/state-check.ts"
   },
   "dependencies": {
     "@apps-in-toss/web-bridge": "^2.7.0",

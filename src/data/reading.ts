@@ -139,9 +139,15 @@ function joinKo(items: string[]): string {
   return `${items.slice(0, -1).join(", ")}와(과) ${items[items.length - 1]}`;
 }
 
-/** 만 나이 근사 — 대운 구간 판정에만 써요 */
+/**
+ * 만 나이 — 대운 구간 판정에만 써요.
+ * 대운수(startAge)는 출생 시각부터 절입까지의 날수로 계산한 "경과 연수"라
+ * 만 나이와 같은 기준이에요. 연도 차만 보면 생일 전 사람이 한 대운 앞서가요.
+ */
 function ageOf(birthDate: string, today: string): number {
-  return Math.max(0, Number(today.slice(0, 4)) - Number(birthDate.slice(0, 4)));
+  const years = Number(today.slice(0, 4)) - Number(birthDate.slice(0, 4));
+  const hadBirthday = today.slice(5) >= birthDate.slice(5);
+  return Math.max(0, hadBirthday ? years : years - 1);
 }
 
 export function readSaju(

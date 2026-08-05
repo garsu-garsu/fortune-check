@@ -177,8 +177,8 @@ export function OnboardingScreen() {
         <input
           type="date"
           value={birthDate}
-          max="2010-12-31"
-          min="1940-01-01"
+          max={kstDate()}
+          min="1930-01-01"
           onChange={(e) => {
             if (!startedRef.current) {
               startedRef.current = true;

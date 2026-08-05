@@ -149,7 +149,20 @@ function load(): Persisted {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      return migrate({ ...EMPTY, ...(JSON.parse(raw) as Partial<Persisted>) });
+      const s = migrate({ ...EMPTY, ...(JSON.parse(raw) as Partial<Persisted>) });
+      // 저장된 띠·별자리는 옛 계산(양력 연 기준)이라 stale 이에요 — birthDate 에서 다시 뽑아요.
+      // 한 명이 깨져 있어도(생년월일 없음 등) 나머지 사람과 검증 기록까지 날리면
+      // 안 되니 사람 단위로 막아요. 실패하면 그 사람만 저장된 원본을 그대로 써요.
+      return {
+        ...s,
+        people: (Array.isArray(s.people) ? s.people : []).map((p) => {
+          try {
+            return makePerson(p.birthDate, p.birthTime, p.name, p.gender, p.id);
+          } catch {
+            return p;
+          }
+        }),
+      };
     }
   } catch {
     /* noop */
@@ -324,6 +337,7 @@ export function StateProvider({ children }: { children: ReactNode }) {
       nickname?: string,
       gender?: Gender,
     ) => {
+      const today = kstDate();
       setState((prev) => {
         // 본인 자리(0번)만 갈아끼워요. 추가한 사람들은 그대로 둬요.
         const existing = prev.people[0];
@@ -335,15 +349,31 @@ export function StateProvider({ children }: { children: ReactNode }) {
           existing?.id,
         );
         const people = [person, ...prev.people.slice(1)];
-        return {
+        const next = {
           ...prev,
           installedAt: prev.installedAt ?? today,
           people,
           activeId: person.id,
         };
+        // 생년월일·생시가 바뀌면 오늘 고정해둔 운세·사주 일운은 옛 사주 기준이라
+        // 버려요(그대로 두면 자정까지 옛 풀이가 남아 사주 카드와 어긋나요).
+        // 지난 날짜 것은 그날 실제로 본 문장이라 검증 기록과 함께 남겨둬요.
+        if (
+          existing == null ||
+          (existing.birthDate === person.birthDate &&
+            existing.birthTime === person.birthTime)
+        )
+          return next;
+        const pinned = { ...prev.pinned };
+        for (const k of Object.keys(pinned)) {
+          if (k.startsWith(`${today}:`)) delete pinned[k];
+        }
+        const pinnedSaju = { ...prev.pinnedSaju };
+        delete pinnedSaju[today];
+        return { ...next, pinned, pinnedSaju };
       });
     },
-    [today],
+    [],
   );
 
   const addPerson = useCallback(
@@ -383,8 +413,11 @@ export function StateProvider({ children }: { children: ReactNode }) {
   // 예전엔 activeId 가 다른 사람이면 통째로 건너뛰었는데, 읽기 경로만 me 로
   // 옮기고 이 가드를 남겨두는 바람에 사람을 추가한 사용자는 pin 이 영영 안 되고
   // 밤마다 검증 화면이 비었어요(연속기록도 조용히 끊기고요).
+  // 렌더 시점의 today 를 쓰면 자정을 넘긴 뒤 누른 기록이 어제로 들어가요
+  // (화면은 켜둔 채였고 리렌더가 없었으니까요). 기록은 누른 순간에 구해요.
   const markViewed = useCallback(
     (cat: FortuneCategory) => {
+      const today = kstDate();
       setState((prev) => {
         const owner = prev.people[0];
         if (!owner) return prev;
@@ -406,11 +439,12 @@ export function StateProvider({ children }: { children: ReactNode }) {
         };
       });
     },
-    [today],
+    [],
   );
 
   // 사주 일운은 문장 풀이 아니라 원국 풀이에서 나와요 — markViewed 와 별도.
   const markSajuViewed = useCallback(() => {
+    const today = kstDate();
     setState((prev) => {
       const owner = prev.people[0];
       if (!owner) return prev;
@@ -423,20 +457,19 @@ export function StateProvider({ children }: { children: ReactNode }) {
         pinnedSaju: { ...prev.pinnedSaju, [today]: dailySajuLine(s, today) },
       };
     });
-  }, [today]);
+  }, []);
 
-  const unlockDetail = useCallback(
-    (cat: Category) => {
-      setState((prev) => ({
-        ...prev,
-        unlocked: { ...prev.unlocked, [`${today}:${cat}`]: true },
-      }));
-    },
-    [today],
-  );
+  const unlockDetail = useCallback((cat: Category) => {
+    const today = kstDate();
+    setState((prev) => ({
+      ...prev,
+      unlocked: { ...prev.unlocked, [`${today}:${cat}`]: true },
+    }));
+  }, []);
 
   const submitCheck = useCallback(
     (cat: Category, verdict: boolean) => {
+      const today = kstDate();
       setState((prev) => ({
         ...prev,
         checks: { ...prev.checks, [`${today}:${cat}`]: verdict },
@@ -445,17 +478,17 @@ export function StateProvider({ children }: { children: ReactNode }) {
       const z = me?.zodiac;
       if (z && cat !== "saju") void submitVerdict(z, cat, verdict);
     },
-    [today, me],
+    [me],
   );
 
   // 광고로 '어제'를 메워 연속 기록을 이어가요(끊길 위기일 때만 UI에 노출).
   const saveStreak = useCallback(() => {
-    const yesterday = prevDate(today);
+    const yesterday = prevDate(kstDate());
     setState((prev) => ({
       ...prev,
       saves: { ...prev.saves, [yesterday]: true },
     }));
-  }, [today]);
+  }, []);
 
   // 세운은 입춘에, 월운은 절입에 바뀌어요(1월 1일·1일이 아니에요).
   // 그래서 달력 날짜가 아니라 그 간지를 키에 넣어요 — 해금이 정확히 그

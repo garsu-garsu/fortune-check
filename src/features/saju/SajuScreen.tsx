@@ -753,7 +753,7 @@ function AddPersonCard({
       <input
         type="date"
         value={birthDate}
-        max="2026-12-31"
+        max={kstDate()}
         min="1930-01-01"
         onChange={(e) => setBirthDate(e.target.value)}
         style={inputStyle}
