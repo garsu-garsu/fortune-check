@@ -86,7 +86,16 @@ export function HomeScreen() {
   const onAdUnlock = (cat: FortuneCategory) => {
     watchThen(() => {
       unlock(cat);
-      openToast("상세 운세를 해금했어요!");
+      // unlock() 직후엔 isUnlocked 상태가 아직 안 바뀌었을 수 있어서, 방금
+      // 해금한 cat 은 명시적으로 빼고 남은 잠긴 상세운 개수를 세요.
+      const remaining = DETAIL_CATEGORIES.filter(
+        (meta) => meta.key !== cat && meta.key !== freeDetail && !isUnlocked(meta.key),
+      ).length;
+      openToast(
+        remaining > 0
+          ? `상세 운세를 해금했어요! 아직 ${remaining}개 더 남았어요`
+          : "상세 운세를 해금했어요!",
+      );
     }, `detail_${cat}`);
   };
 
@@ -194,8 +203,8 @@ export function HomeScreen() {
             </Paragraph>
             <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 3 }}>
               {streak > 0
-                ? `연속 ${streak}일째 · 오늘도 밤에 검증하면 이어져요`
-                : "오늘 운세를 확인하고 밤에 검증해 보세요"}
+                ? `연속 ${streak}일째 · 오늘도 검증하면 이어져요`
+                : "오늘 운세를 확인하고 검증해 보세요"}
             </Paragraph>
           </div>
         </Card>
@@ -263,10 +272,10 @@ export function HomeScreen() {
       {/* 공유 + 밤 검증 안내 */}
       <Card style={{ marginTop: 16, textAlign: "center" }}>
         <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
-          밤이 되면 검증해요 ✅
+          맞았는지 검증해요 ✅
         </Paragraph>
         <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 6, lineHeight: 1.5 }}>
-          오늘 확인한 운세가 실제로 맞았는지 O/X로 체크하면 적중률이 쌓여요.
+          오늘 확인한 운세가 맞았는지 O/X로 체크하면 적중률이 쌓여요. 지금 바로 해도 돼요.
         </Paragraph>
         <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
           <Button display="full" variant="weak" onClick={() => onShareToday(overall.score)}>

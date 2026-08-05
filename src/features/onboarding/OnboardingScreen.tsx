@@ -1,19 +1,31 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import { requestNotifyConsent } from "../../data/notify";
-import { type Gender } from "../../data/saju";
-import { starSignOf, zodiacOf } from "../../data/zodiac";
+import { ELEMENT_TRAIT } from "../../data/reading";
+import {
+  SINSAL_MEANING,
+  TEN_GOD_MEANING,
+  branchElement,
+  branchRelationOf,
+  dayPillarOf,
+  sinsalOf,
+  stemElement,
+  tenGodOf,
+  type Gender,
+} from "../../data/saju";
+import { ZODIAC_PICK, starSignOf, zodiacOf } from "../../data/zodiac";
 import { EVENT, track } from "../../lib/analytics";
+import { kstDate } from "../../lib/kst";
 import { useRouter } from "../../router";
 import { useAppState } from "../../state";
 import { palette } from "../../theme";
 
 const STEPS = [
   { emoji: "🔮", title: "사주로 봐요", desc: "생년월일로 사주 원국을 계산해 오늘의 기운을 풀어요." },
-  { emoji: "✅", title: "밤엔 검증해요", desc: "운세가 실제로 맞았는지 O/X로 3초 체크인해요." },
+  { emoji: "✅", title: "맞았는지 검증해요", desc: "하루를 보내고 맞았는지 O/X로 3초만 체크해요." },
   { emoji: "📊", title: "적중률을 쌓아요", desc: "나에게 어떤 운이 잘 맞는지 매일 또렷해져요." },
 ];
 
@@ -29,6 +41,39 @@ export function OnboardingScreen() {
   const [busy, setBusy] = useState(false);
   // 선택 항목은 접어둬요 — 첫 화면에 필드가 4개 보이면 입력 자체를 포기해요.
   const [showOptional, setShowOptional] = useState(false);
+  // "화면만 보고 이탈"과 "입력하다 이탈"을 구분하려고, 입력을 시작한 순간을 1회만 남겨요.
+  const startedRef = useRef(false);
+  // 띠 미리보기 — 지지 인덱스(0=자/쥐). 아직 안 골랐으면 null.
+  const [pickedZodiac, setPickedZodiac] = useState<number | null>(null);
+
+  const todayPillar = dayPillarOf(kstDate());
+  const todayElement = stemElement(todayPillar.stem);
+
+  const pickedGod =
+    pickedZodiac != null ? tenGodOf(branchElement(pickedZodiac), todayElement) : null;
+  const pickedRel =
+    pickedZodiac != null ? branchRelationOf(pickedZodiac, todayPillar.branch) : null;
+  const pickedSin =
+    pickedZodiac != null ? sinsalOf(pickedZodiac, todayPillar.branch) : null;
+  // 충/합/삼합이 있으면 그걸 보너스로, 없으면 신살이 있을 때만 보너스로 보여줘요.
+  const pickedBonus =
+    pickedRel === "충" ? (
+      <>
+        오늘 일진과 <b>충</b>이에요. 부딪히기 쉬우니 한 박자 늦춰도 좋아요.
+      </>
+    ) : pickedRel === "육합" ? (
+      <>
+        오늘 일진과 <b>합</b>이에요. 사람과 잘 맞는 흐름이에요.
+      </>
+    ) : pickedRel === "삼합" ? (
+      <>
+        오늘 일진과 <b>삼합</b>이에요. 일이 술술 풀리는 흐름이에요.
+      </>
+    ) : pickedSin ? (
+      <>
+        <b>{pickedSin}</b>의 기운이 있어요 — {SINSAL_MEANING[pickedSin]}.
+      </>
+    ) : null;
 
   const preview =
     birthDate.length === 10
@@ -60,16 +105,87 @@ export function OnboardingScreen() {
   return (
     <ScreenLayout
       title="운세·사주 팩트체크"
-      subtitle="사주로 보고, 밤에 맞았는지 검증해요"
+      subtitle="사주로 보고, 맞았는지 검증해요"
     >
+      {/* 입력 전에 오늘의 일진을 먼저 보여줘요 — 생년월일을 넣기 전에도 얻는 게 있어야 해요.
+          단, 이건 모두에게 같은 일진이라 "운세"라는 말은 쓰지 않아요(개인 운세로 오해 방지). */}
       <Card style={{ marginTop: 4 }}>
+        <Paragraph typography="t5" fontWeight="bold" color={palette.ink}>
+          오늘은 {todayPillar.name}일
+        </Paragraph>
+        <Paragraph typography="t6" color={palette.ink} style={{ marginTop: 6, lineHeight: 1.6 }}>
+          <b>{todayElement}</b> 기운이 도는 날이에요 — {ELEMENT_TRAIT[todayElement]}.
+        </Paragraph>
+
+        <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10, marginBottom: 6 }}>
+          내 띠를 눌러보세요
+        </Paragraph>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 4 }}>
+          {ZODIAC_PICK.map((z, i) => (
+            <button
+              key={z.name}
+              type="button"
+              onClick={() => {
+                setPickedZodiac(i);
+                track(EVENT.previewTapped, { zodiac: z.name });
+              }}
+              style={{
+                height: 44,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 1,
+                padding: 0,
+                borderRadius: 10,
+                border: `1px solid ${pickedZodiac === i ? palette.primary : palette.line}`,
+                background: pickedZodiac === i ? palette.primary : "#FBFAFF",
+                color: pickedZodiac === i ? palette.white : palette.ink,
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ fontSize: 16, lineHeight: 1 }}>{z.emoji}</span>
+              <span style={{ fontSize: 10, lineHeight: 1 }}>{z.name}</span>
+            </button>
+          ))}
+        </div>
+
+        {pickedZodiac == null || pickedGod == null ? (
+          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
+            이건 오늘 모두에게 같은 일진이에요. 내 사주에 어떻게 작용하는지는 생년월일을 넣어야 볼 수 있어요.
+          </Paragraph>
+        ) : (
+          <div style={{ marginTop: 10 }}>
+            <Paragraph typography="t7" color={palette.ink} style={{ lineHeight: 1.5 }}>
+              {ZODIAC_PICK[pickedZodiac].emoji} {ZODIAC_PICK[pickedZodiac].name}띠는 오늘{" "}
+              <b>{pickedGod}</b>({TEN_GOD_MEANING[pickedGod]})의 기운과 만나요.
+            </Paragraph>
+            {pickedBonus && (
+              <Paragraph typography="t7" color={palette.ink} style={{ marginTop: 4, lineHeight: 1.5 }}>
+                {pickedBonus}
+              </Paragraph>
+            )}
+            <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 4, lineHeight: 1.5 }}>
+              이건 태어난 해 하나로만 본 거예요. 생년월일을 넣으면 네 기둥 전부로 봐요.
+            </Paragraph>
+          </div>
+        )}
+      </Card>
+
+      <Card style={{ marginTop: 12 }}>
         <label style={labelStyle}>생년월일</label>
         <input
           type="date"
           value={birthDate}
           max="2010-12-31"
           min="1940-01-01"
-          onChange={(e) => setBirthDate(e.target.value)}
+          onChange={(e) => {
+            if (!startedRef.current) {
+              startedRef.current = true;
+              track(EVENT.onboardingStarted, {});
+            }
+            setBirthDate(e.target.value);
+          }}
           style={inputStyle}
         />
 

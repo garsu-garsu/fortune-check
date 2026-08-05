@@ -42,6 +42,7 @@ export const EVENT = {
   shareCompleted: "share_completed",
   notifyConsent: "notify_consent",
   // 앱 고유
+  onboardingStarted: "onboarding_started",
   onboardingComplete: "onboarding_complete",
   fortuneViewed: "fortune_viewed",
   verifySubmitted: "verify_submitted",
@@ -49,4 +50,5 @@ export const EVENT = {
   streakSaved: "streak_saved",
   detailUnlocked: "detail_unlocked",
   personAdded: "person_added",
+  previewTapped: "preview_zodiac_tapped",
 } as const;

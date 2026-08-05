@@ -305,7 +305,7 @@ export function StatsScreen() {
         ))}
         {monthChecks.length === 0 && (
           <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
-            아직 검증 기록이 없어요. 오늘 운세를 확인하고 밤에 검증해 보세요.
+            아직 검증 기록이 없어요. 오늘 운세를 확인하고 검증해 보세요.
           </Paragraph>
         )}
       </Card>

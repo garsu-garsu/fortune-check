@@ -30,6 +30,19 @@ export function zodiacOf(birthDate: string): Zodiac {
   return ANIMALS[((year % 12) + 12) % 12];
 }
 
+/**
+ * 띠 고르기 UI 용 목록 — **지지(地支) 인덱스 순서**(0=자/쥐)예요.
+ * 위 ANIMALS 는 `year % 12` 순서(0=원숭이)라 지지 인덱스와 달라요.
+ * 사주 계산(branchRelationOf·sinsalOf 등)에 넘길 인덱스는 반드시 이 목록 기준이어야 해요.
+ * saju.ts 의 BRANCH_ANIMALS 와 순서가 같은지는 `npm run check:preview` 가 지켜요.
+ */
+export const ZODIAC_PICK = [
+  { emoji: "🐭", name: "쥐" }, { emoji: "🐮", name: "소" }, { emoji: "🐯", name: "호랑이" },
+  { emoji: "🐰", name: "토끼" }, { emoji: "🐲", name: "용" }, { emoji: "🐍", name: "뱀" },
+  { emoji: "🐴", name: "말" }, { emoji: "🐑", name: "양" }, { emoji: "🐵", name: "원숭이" },
+  { emoji: "🐔", name: "닭" }, { emoji: "🐶", name: "개" }, { emoji: "🐷", name: "돼지" },
+] as const;
+
 const SIGNS: { name: string; emoji: string; from: [number, number] }[] = [
   { name: "염소자리", emoji: "♑", from: [12, 22] },
   { name: "물병자리", emoji: "♒", from: [1, 20] },

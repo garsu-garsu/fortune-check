@@ -207,8 +207,8 @@ export function VerifyScreen() {
           </Paragraph>
           <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 6, lineHeight: 1.5 }}>
             {kind === "운세"
-              ? "오늘 운세를 먼저 확인하면 밤에 검증할 수 있어요. (아침에 본 운세만 검증돼요)"
-              : "사주 탭에서 오늘 일운 풀이를 열면 밤에 맞았는지 검증할 수 있어요."}
+              ? "오늘 운세를 먼저 확인하면 검증할 수 있어요. (확인한 운세만 검증돼요)"
+              : "사주 탭에서 오늘 일운 풀이를 열면 맞았는지 검증할 수 있어요."}
           </Paragraph>
           <div style={{ marginTop: 14 }}>
             <Button

@@ -93,7 +93,7 @@ const DAY_MASTER: Record<
   },
 };
 
-const ELEMENT_TRAIT: Record<Element, string> = {
+export const ELEMENT_TRAIT: Record<Element, string> = {
   목: "뻗어나가고 시작하는 기운",
   화: "드러내고 밝히는 기운",
   토: "품고 중재하는 기운",
