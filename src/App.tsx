@@ -67,6 +67,24 @@ function Shell() {
     }
   }, [back, canGoBack]);
 
+  // 우측 상단 닫기(홈) 버튼 — 어느 화면에 있든 앱을 닫아요.
+  // backEvent 만 구독하면 이 버튼을 아무도 처리하지 않아 눌러도 안 닫혀요.
+  useEffect(() => {
+    try {
+      return graniteEvent.addEventListener("homeEvent", {
+        onEvent: () => {
+          try {
+            void closeView();
+          } catch {
+            /* 브라우저 등 미지원 환경 */
+          }
+        },
+      });
+    } catch {
+      return undefined;
+    }
+  }, []);
+
   return (
     <div
       style={{
