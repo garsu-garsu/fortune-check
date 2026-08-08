@@ -28,8 +28,6 @@ function CurrentScreen() {
   if (!profile) return <OnboardingScreen />;
 
   switch (route.name) {
-    case "onboarding":
-      return <OnboardingScreen />;
     case "home":
       return <HomeScreen />;
     case "verify":
