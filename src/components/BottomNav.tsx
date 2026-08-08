@@ -26,7 +26,6 @@ export function BottomNav() {
         display: "flex",
         background: palette.white,
         borderTop: `1px solid ${palette.line}`,
-        paddingBottom: "max(0px, env(safe-area-inset-bottom))",
       }}
     >
       {TABS.map((tab) => {

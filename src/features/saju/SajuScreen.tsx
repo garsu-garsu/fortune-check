@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 
 import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
-import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import { Teaser } from "../../components/Teaser";
 import {
@@ -428,10 +427,6 @@ export function SajuScreen() {
         }
         note="다음 달이 되면 새 풀이가 나와요."
       />
-
-      <div style={{ marginTop: 12 }}>
-        <BannerAd slot="saju_mid" />
-      </div>
 
       {/* 풀이 본문 — 첫 섹션(일간)은 맛보기로 열어두고 나머지는 광고 해금.
           사주는 평생 안 바뀌니 한 번 열면 그 사람은 계속 열려 있어요. */}

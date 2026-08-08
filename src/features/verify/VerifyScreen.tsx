@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
-import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import {
   CATEGORIES,
@@ -107,9 +106,6 @@ export function VerifyScreen() {
       title="오늘 운세, 맞았어요?"
       subtitle="확인한 운세를 O/X로 검증하면 적중률이 쌓여요"
     >
-      {/* 화면당 배너 1개 — 최상단 이미지 강조 */}
-      <BannerAd slot="verify_top" />
-
       {/* 연속 기록 끊길 위기 → 광고 보고 지키기 (손실회피 2nd-chance) */}
       {canSaveStreak && (
         <Card

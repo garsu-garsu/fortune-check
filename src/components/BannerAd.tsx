@@ -4,41 +4,58 @@ import { useEffect, useRef, useState } from "react";
 import { EVENT, track } from "../lib/analytics";
 import { AD_GROUP_ID_BANNER } from "../lib/env";
 
-/** 배너 광고 — 한 화면에 1개만 (탭/메인 화면 하단). */
-export function BannerAd({ slot }: { slot?: string }) {
-  const targetRef = useRef<HTMLDivElement | null>(null);
-  const [visible, setVisible] = useState(false);
+/**
+ * 한 번 붙은 배너는 같은 광고를 계속 물고 있어요. 주기마다 떼었다 다시 붙여
+ * 새 광고를 받아옵니다.
+ *
+ * 30초인 이유: 토스 배너는 AdMob 기반인데 AdMob 은 30초보다 잦은 갱신을
+ * 무효 트래픽으로 봐요. 더 짧게 잡으면 수익보다 제재 위험이 커져요.
+ */
+const REFRESH_MS = 30_000;
 
+/** 배너 광고 — 앱 전체에 1개만 (App.tsx 하단 고정). */
+export function BannerAd() {
+  const targetRef = useRef<HTMLDivElement | null>(null);
+  const [ready, setReady] = useState(false);
+  // 이 값이 바뀔 때마다 아래 effect 가 다시 돌면서 배너를 새로 붙여요.
+  const [round, setRound] = useState(0);
+
+  // SDK 초기화. onInitialized 를 받기 전에 attachBanner 를 부르면 광고가 안 붙어요.
   useEffect(() => {
-    const target = targetRef.current;
-    if (AD_GROUP_ID_BANNER === "" || target == null) return;
-    let detach: (() => void) | undefined;
+    if (AD_GROUP_ID_BANNER === "") return;
     try {
-      if (!TossAds.attachBanner.isSupported()) return;
-      try {
-        if (TossAds.initialize.isSupported()) TossAds.initialize({});
-      } catch {
-        /* noop */
-      }
-      const { destroy } = TossAds.attachBanner(AD_GROUP_ID_BANNER, target, {
-        theme: "auto",
-        variant: "card",
+      if (!TossAds.initialize.isSupported()) return;
+      TossAds.initialize({
         callbacks: {
-          onAdRendered: () => {
-            setVisible(true);
-            track(EVENT.adBannerImpression, { slot: slot ?? "" }, "impression");
-          },
-          onAdFailedToRender: (p) => {
-            console.error(p.error);
-            setVisible(false);
-          },
-          onNoFill: () => setVisible(false),
+          onInitialized: () => setReady(true),
+          onInitializationFailed: (error) => console.error(error),
         },
       });
-      detach = destroy;
     } catch (err) {
       console.error(err);
     }
+  }, []);
+
+  useEffect(() => {
+    const target = targetRef.current;
+    if (!ready || target == null) return;
+    let detach: (() => void) | undefined;
+    try {
+      if (!TossAds.attachBanner.isSupported()) return;
+      const attached = TossAds.attachBanner(AD_GROUP_ID_BANNER, target, {
+        theme: "auto",
+        variant: "card",
+        callbacks: {
+          onAdRendered: () => track(EVENT.adBannerImpression, {}, "impression"),
+          onNoFill: () => console.warn("[banner] 채울 광고가 없어요"),
+          onAdFailedToRender: (p) => console.error(p.error),
+        },
+      });
+      detach = () => attached?.destroy();
+    } catch (err) {
+      console.error(err);
+    }
+    // 화면 이동으로 컴포넌트가 사라질 때도 반드시 떼야 광고가 남지 않아요.
     return () => {
       try {
         detach?.();
@@ -46,13 +63,32 @@ export function BannerAd({ slot }: { slot?: string }) {
         /* noop */
       }
     };
-  }, [slot]);
+  }, [ready, round]);
+
+  // 화면을 보고 있을 때만 갱신해요. 안 보이는 동안 돌리면 노출로 잡히지 않고
+  // 호출만 쌓여요.
+  useEffect(() => {
+    if (!ready) return;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const start = () => {
+      stop();
+      timer = setInterval(() => setRound((n) => n + 1), REFRESH_MS);
+    };
+    const stop = () => {
+      if (timer != null) clearInterval(timer);
+      timer = undefined;
+    };
+    const onVisibility = () => (document.hidden ? stop() : start());
+
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [ready]);
 
   if (AD_GROUP_ID_BANNER === "") return null;
-  return (
-    <div
-      ref={targetRef}
-      style={{ minHeight: visible ? undefined : 0, overflow: "hidden" }}
-    />
-  );
+  // 높이 0 이거나 overflow: hidden 이면 광고가 렌더링되지 않아요. 자리를 미리 잡아둡니다.
+  return <div ref={targetRef} style={{ width: "100%", height: 96 }} />;
 }

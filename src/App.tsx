@@ -2,6 +2,7 @@ import { closeView, graniteEvent } from "@apps-in-toss/web-framework";
 import { useEffect } from "react";
 
 import "./App.css";
+import { BannerAd } from "./components/BannerAd";
 import { BottomNav } from "./components/BottomNav";
 import { HomeScreen } from "./features/home/HomeScreen";
 import { OnboardingScreen } from "./features/onboarding/OnboardingScreen";
@@ -15,6 +16,9 @@ import { StateProvider, useAppState } from "./state";
 import { palette } from "./theme";
 
 const TAB_SCREENS: RouteName[] = ["home", "saju", "verify", "stats"];
+
+/** BannerAd 가 잡아두는 높이 — 본문이 배너 뒤로 숨지 않게 같은 값만큼 비워둬요. */
+const BANNER_H = 96;
 
 function CurrentScreen() {
   const { route } = useRouter();
@@ -93,12 +97,32 @@ function Shell() {
         height: "100dvh",
         overflow: "hidden",
         background: palette.bg,
+        // 하단 고정 배너(96px + 안전영역)만큼 본문·탭 자리를 비워둬요.
+        // 이게 없으면 마지막 버튼이 배너에 가려요.
+        boxSizing: "border-box",
+        paddingBottom: `calc(${BANNER_H}px + env(safe-area-inset-bottom))`,
       }}
     >
       <div style={{ flex: 1, minHeight: 0 }}>
         <CurrentScreen />
       </div>
       {showTabs && <BottomNav />}
+
+      {/* 배너는 화면마다 따로 두지 않고 여기 하나만 띄워요 — 앱 전체에 배너는 하나입니다.
+          본문과 탭은 위 컨테이너의 paddingBottom 만큼 올라와 있어서 가려지지 않아요. */}
+      <div
+        style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 10,
+          background: palette.bg,
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
+      >
+        <BannerAd />
+      </div>
     </div>
   );
 }

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button, Paragraph } from "@toss/tds-mobile";
 
-import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import { CATEGORIES, type Category } from "../../data/fortune";
 import {
@@ -167,9 +166,6 @@ export function StatsScreen() {
       title="내 적중률 통계"
       subtitle={`${month.replace("-", ".")} 기준`}
     >
-      {/* 화면당 배너 1개 — 최상단 이미지 강조 */}
-      <BannerAd slot="stats_top" />
-
       {/* 이번 달 적중률 (강조) */}
       <Card
         style={{

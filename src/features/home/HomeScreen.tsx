@@ -2,7 +2,6 @@ import { useEffect } from "react";
 
 import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
-import { BannerAd } from "../../components/BannerAd";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import { Teaser } from "../../components/Teaser";
 import {
@@ -239,11 +238,6 @@ export function HomeScreen() {
           <Chip label={`행운의 숫자 ${overall.luckyNumber}`} />
         </div>
       </Card>
-
-      {/* 배너는 첫 가치(종합운) 뒤에 — 앱을 열자마자 광고부터 보이면 바로 나가요 */}
-      <div style={{ marginTop: 12 }}>
-        <BannerAd slot="home_top" />
-      </div>
 
       {/* 사주 원국에서 나온 오늘의 기운 — 운세 문장 톤을 정하는 근거 */}
       <Card style={{ marginTop: 12 }}>
