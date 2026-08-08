@@ -2,13 +2,14 @@ import { useState } from "react";
 
 import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
+import { NotifySlotCard } from "../../components/NotifySlotCard";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import {
   CATEGORIES,
   type CategoryMeta,
   type CheckKind,
 } from "../../data/fortune";
-import { retryNotifyConsentOnce } from "../../data/notify";
+import { NIGHT_SLOTS, agreedNightSlot, retryNotifyConsentOnce } from "../../data/notify";
 import { shareApp } from "../../data/share";
 import { EVENT, track } from "../../lib/analytics";
 import { askReviewOnce } from "../../lib/review";
@@ -37,6 +38,7 @@ export function VerifyScreen() {
   const { watchThen } = useAdGate();
   const { openToast } = useToast();
   const [kind, setKind] = useState<CheckKind>("운세");
+  const [agreedNight, setAgreedNight] = useState(agreedNightSlot);
 
   // 연속 기록이 끊길 위기 → 광고 보고 어제를 메워 기록 유지(결정적 2nd-chance)
   const onSaveStreak = () => {
@@ -153,6 +155,14 @@ export function VerifyScreen() {
           </Paragraph>
         </div>
       </Card>
+
+      <NotifySlotCard
+        title="밤 검증 알림, 몇 시에 받을까요?"
+        slots={NIGHT_SLOTS}
+        agreedCode={agreedNight}
+        onAgreed={setAgreedNight}
+        where="verify"
+      />
 
       {/* 운세와 사주는 검증하는 대상이 달라서 세그먼트로 나눠요.
           적중률·연속기록은 하나로 유지돼요(둘로 나누면 둘 다 약해져요). */}

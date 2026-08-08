@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
-import { requestNotifyConsent } from "../../data/notify";
+import { DEFAULT_MORNING_CODE, requestNotifyConsent } from "../../data/notify";
 import { ELEMENT_TRAIT } from "../../data/reading";
 import {
   SINSAL_MEANING,
@@ -94,7 +94,7 @@ export function OnboardingScreen() {
       // 운세를 먼저 보여주고 알림 동의를 물어요. 결과를 보기도 전에 시스템 팝업이
       // 뜨면 받은 것 없이 거절하게 돼요 — 화면을 넘긴 뒤에 요청해요.
       reset({ name: "home" });
-      void requestNotifyConsent().then((consent) => {
+      void requestNotifyConsent(DEFAULT_MORNING_CODE).then((consent) => {
         if (consent) track(EVENT.notifyConsent, { result: consent, where: "onboarding" });
       });
     } finally {
@@ -103,7 +103,7 @@ export function OnboardingScreen() {
   };
 
   return (
-    <ScreenLayout hideAd       title="운세·사주 팩트체크"
+    <ScreenLayout hideAd title="운세·사주 팩트체크"
       subtitle="사주로 보고, 맞았는지 검증해요"
     >
       {/* 입력 전에 오늘의 일진을 먼저 보여줘요 — 생년월일을 넣기 전에도 얻는 게 있어야 해요.

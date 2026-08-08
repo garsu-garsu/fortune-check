@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
+import { NotifySlotCard } from "../../components/NotifySlotCard";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import { Teaser } from "../../components/Teaser";
 import {
@@ -10,6 +11,7 @@ import {
   type CategoryMeta,
   type FortuneCategory,
 } from "../../data/fortune";
+import { MORNING_SLOTS, agreedMorningSlot } from "../../data/notify";
 import { TEN_GOD_MEANING } from "../../data/saju";
 import { shareApp } from "../../data/share";
 import { EVENT, track } from "../../lib/analytics";
@@ -57,6 +59,7 @@ export function HomeScreen() {
   const { navigate } = useRouter();
   const { watchThen } = useAdGate();
   const { openToast } = useToast();
+  const [agreedMorning, setAgreedMorning] = useState(agreedMorningSlot);
 
   const today = kstDate();
   // 오늘 광고 없이 열리는 상세운 1종 (매일 바뀜)
@@ -280,6 +283,14 @@ export function HomeScreen() {
           </Button>
         </div>
       </Card>
+
+      <NotifySlotCard
+        title="아침 운세 알림, 몇 시에 받을까요?"
+        slots={MORNING_SLOTS}
+        agreedCode={agreedMorning}
+        onAgreed={setAgreedMorning}
+        where="home"
+      />
     </ScreenLayout>
   );
 }
