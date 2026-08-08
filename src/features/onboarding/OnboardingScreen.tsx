@@ -103,8 +103,7 @@ export function OnboardingScreen() {
   };
 
   return (
-    <ScreenLayout
-      title="운세·사주 팩트체크"
+    <ScreenLayout hideAd       title="운세·사주 팩트체크"
       subtitle="사주로 보고, 맞았는지 검증해요"
     >
       {/* 입력 전에 오늘의 일진을 먼저 보여줘요 — 생년월일을 넣기 전에도 얻는 게 있어야 해요.

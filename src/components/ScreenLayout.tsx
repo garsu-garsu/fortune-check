@@ -2,9 +2,12 @@ import type { ReactNode } from "react";
 
 import { Top } from "@toss/tds-mobile";
 
+import { ImageBannerAd } from "./BannerAd";
 import { palette } from "../theme";
 
 interface ScreenLayoutProps {
+  /** 소개·인트로 화면처럼 광고를 띄우면 안 되는 곳에서 켜요. */
+  hideAd?: boolean;
   title?: string;
   subtitle?: string;
   headerRight?: ReactNode;
@@ -14,6 +17,7 @@ interface ScreenLayoutProps {
 
 /** 공통 화면 틀 — 본문 상단 큰 제목(TDS Top) + 스크롤 본문. 상단 바는 토스 네이티브가 처리. */
 export function ScreenLayout({
+  hideAd,
   title,
   subtitle,
   headerRight,
@@ -57,6 +61,12 @@ export function ScreenLayout({
           />
         )}
         {children}
+
+        {/* 이미지 강조형 배너 — 본문을 끝까지 내린 사람에게만 보여요.
+            하단 고정 배너는 창에 붙어 있고, 이건 콘텐츠 흐름의 맨 끝입니다. */}
+        <div style={{ marginTop: 24 }}>
+          {!hideAd && <ImageBannerAd />}
+        </div>
       </main>
 
       {footer != null && (
