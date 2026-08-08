@@ -1,4 +1,4 @@
-import { requestReview } from "@apps-in-toss/web-bridge";
+import { requestReview } from "@apps-in-toss/web-framework";
 
 const ASKED_KEY = "fc:review-asked";
 

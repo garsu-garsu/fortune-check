@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "granite dev",
-    "build": "ait build",
+    "dev": "vite dev",
+    "build": "vite build && ait build",
     "deploy": "ait deploy",
     "lint": "eslint .",
     "typecheck": "tsc -b --force",
@@ -19,8 +19,7 @@
     "check:state": "node --experimental-strip-types scripts/state-check.ts"
   },
   "dependencies": {
-    "@apps-in-toss/web-bridge": "^2.7.0",
-    "@apps-in-toss/web-framework": "^2.7.0",
+    "@apps-in-toss/web-framework": "^3.0.2",
     "@emotion/react": "^11.14.0",
     "@supabase/supabase-js": "^2.108.1",
     "@toss/tds-colors": "^0.1.0",
@@ -30,6 +29,7 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@apps-in-toss/devtools": "^3.0.2",
     "@eslint/js": "^9.21.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",

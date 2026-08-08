@@ -2,7 +2,7 @@ import { getTossShareLink, share } from "@apps-in-toss/web-framework";
 
 import { isInTossApp } from "../lib/tossEnv";
 
-// granite.config.ts 의 appName / brand.icon 과 맞춰야 해요.
+// apps-in-toss.config.ts 의 appName / brand.icon 과 맞춰야 해요.
 const DEEP_LINK = "intoss://fortune-check";
 const OG_IMAGE =
   "https://static.toss.im/appsintoss/13203/78c0dc73-c0da-4257-9686-7195c044727d.png";
