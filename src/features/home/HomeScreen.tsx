@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
+import { CoachMark } from "../../components/CoachMark";
 import { NotifySlotCard } from "../../components/NotifySlotCard";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import { Teaser } from "../../components/Teaser";
@@ -17,9 +18,17 @@ import { shareApp } from "../../data/share";
 import { EVENT, track } from "../../lib/analytics";
 import { kstDate } from "../../lib/kst";
 import { useAdGate } from "../../hooks/useAdGate";
+import { useOnboarding } from "../../hooks/useOnboarding";
 import { useRouter } from "../../router";
 import { useAppState } from "../../state";
 import { palette } from "../../theme";
+
+// 앱이 뭘 해주는지는 온보딩 폼 대신 여기, 실제 화면을 짚어가며 알려줘요.
+const TOUR_MESSAGES = [
+  "여기서 오늘의 사주 운세를 확인해요",
+  "저녁엔 맞았는지 눌러서 O/X로 체크해요",
+  "알림을 받아두면 매일 잊지 않고 적중률을 쌓을 수 있어요",
+];
 
 function ScoreBar({ score }: { score: number }) {
   return (
@@ -73,6 +82,37 @@ export function HomeScreen() {
       track(EVENT.fortuneViewed, { category: cat });
     }
   }, [profile, markViewed, freeDetail]);
+
+  // 첫 방문 코치마크 — 종합운 카드 → 검증 버튼 → 알림 카드 순으로 짚어줘요.
+  const { index: tourIndex, next: tourNext, skip: tourSkip } = useOnboarding(
+    TOUR_MESSAGES.length,
+  );
+  const overallRef = useRef<HTMLDivElement>(null);
+  const verifyRef = useRef<HTMLDivElement>(null);
+  const notifyRef = useRef<HTMLDivElement>(null);
+  const tourTargetRef =
+    tourIndex === 0 ? overallRef : tourIndex === 1 ? verifyRef : notifyRef;
+
+  // 검증·알림 카드는 스크롤해야 보여서, 단계가 바뀔 때 대상을 화면 가운데로 옮겨요.
+  // 첫 단계(종합운)는 이미 화면 위쪽에 있어 스크롤이 필요 없어요.
+  useEffect(() => {
+    if (tourIndex <= 0) return;
+    tourTargetRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tourIndex]);
+
+  // 창 전체 클릭으로 다음 단계 — 건너뛰기 버튼 클릭은 여기서 가로채지 않고 그대로 통과시켜요.
+  useEffect(() => {
+    if (tourIndex < 0) return;
+    const onClick = (event: MouseEvent) => {
+      if ((event.target as HTMLElement | null)?.closest("[data-tour-skip]") != null) return;
+      event.preventDefault();
+      event.stopPropagation();
+      tourNext();
+    };
+    window.addEventListener("click", onClick, true);
+    return () => window.removeEventListener("click", onClick, true);
+  }, [tourIndex, tourNext]);
 
   if (!profile) return null;
 
@@ -213,34 +253,36 @@ export function HomeScreen() {
       )}
 
       {/* 종합운 (무료, 강조 카드) */}
-      <Card
-        style={{
-          marginTop: 8,
-          background: `linear-gradient(135deg, ${palette.primary}, ${palette.primaryDeep})`,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 22 }}>🔮</span>
-          <Paragraph typography="t5" fontWeight="bold" color={palette.white}>
-            종합운
-          </Paragraph>
-          <span style={{ flex: 1 }} />
-          <Paragraph typography="t4" fontWeight="bold" color={palette.gold}>
-            {overall.score}점
-          </Paragraph>
-        </div>
-        <Paragraph
-          typography="t5"
-          color={palette.white}
-          style={{ marginTop: 12, lineHeight: 1.65 }}
+      <div ref={overallRef}>
+        <Card
+          style={{
+            marginTop: 8,
+            background: `linear-gradient(135deg, ${palette.primary}, ${palette.primaryDeep})`,
+          }}
         >
-          {overall.text}
-        </Paragraph>
-        <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
-          <Chip label={`행운의 색 ${overall.luckyColor}`} />
-          <Chip label={`행운의 숫자 ${overall.luckyNumber}`} />
-        </div>
-      </Card>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 22 }}>🔮</span>
+            <Paragraph typography="t5" fontWeight="bold" color={palette.white}>
+              종합운
+            </Paragraph>
+            <span style={{ flex: 1 }} />
+            <Paragraph typography="t4" fontWeight="bold" color={palette.gold}>
+              {overall.score}점
+            </Paragraph>
+          </div>
+          <Paragraph
+            typography="t5"
+            color={palette.white}
+            style={{ marginTop: 12, lineHeight: 1.65 }}
+          >
+            {overall.text}
+          </Paragraph>
+          <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
+            <Chip label={`행운의 색 ${overall.luckyColor}`} />
+            <Chip label={`행운의 숫자 ${overall.luckyNumber}`} />
+          </div>
+        </Card>
+      </div>
 
       {/* 사주 원국에서 나온 오늘의 기운 — 운세 문장 톤을 정하는 근거 */}
       <Card style={{ marginTop: 12 }}>
@@ -267,30 +309,44 @@ export function HomeScreen() {
       {DETAIL_CATEGORIES.map(renderDetail)}
 
       {/* 공유 + 밤 검증 안내 */}
-      <Card style={{ marginTop: 16, textAlign: "center" }}>
-        <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
-          맞았는지 검증해요 ✅
-        </Paragraph>
-        <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 6, lineHeight: 1.5 }}>
-          오늘 확인한 운세가 맞았는지 O/X로 체크하면 적중률이 쌓여요. 지금 바로 해도 돼요.
-        </Paragraph>
-        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-          <Button display="full" variant="weak" onClick={() => onShareToday(overall.score)}>
-            친구에게 공유
-          </Button>
-          <Button display="full" onClick={() => navigate({ name: "verify" })}>
-            검증하러 가기
-          </Button>
-        </div>
-      </Card>
+      <div ref={verifyRef}>
+        <Card style={{ marginTop: 16, textAlign: "center" }}>
+          <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
+            맞았는지 검증해요 ✅
+          </Paragraph>
+          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 6, lineHeight: 1.5 }}>
+            오늘 확인한 운세가 맞았는지 O/X로 체크하면 적중률이 쌓여요. 지금 바로 해도 돼요.
+          </Paragraph>
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+            <Button display="full" variant="weak" onClick={() => onShareToday(overall.score)}>
+              친구에게 공유
+            </Button>
+            <Button display="full" onClick={() => navigate({ name: "verify" })}>
+              검증하러 가기
+            </Button>
+          </div>
+        </Card>
+      </div>
 
-      <NotifySlotCard
-        title="아침 운세 알림, 몇 시에 받을까요?"
-        slots={MORNING_SLOTS}
-        agreedCode={agreedMorning}
-        onAgreed={setAgreedMorning}
-        where="home"
-      />
+      <div ref={notifyRef}>
+        <NotifySlotCard
+          title="아침 운세 알림, 몇 시에 받을까요?"
+          slots={MORNING_SLOTS}
+          agreedCode={agreedMorning}
+          onAgreed={setAgreedMorning}
+          where="home"
+        />
+      </div>
+
+      {tourIndex >= 0 && (
+        <CoachMark
+          targetRef={tourTargetRef}
+          message={TOUR_MESSAGES[tourIndex]}
+          index={tourIndex}
+          total={TOUR_MESSAGES.length}
+          onSkip={tourSkip}
+        />
+      )}
     </ScreenLayout>
   );
 }

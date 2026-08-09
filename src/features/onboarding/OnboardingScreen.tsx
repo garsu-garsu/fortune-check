@@ -23,12 +23,6 @@ import { useRouter } from "../../router";
 import { useAppState } from "../../state";
 import { palette } from "../../theme";
 
-const STEPS = [
-  { emoji: "🔮", title: "사주로 봐요", desc: "생년월일로 사주 원국을 계산해 오늘의 기운을 풀어요." },
-  { emoji: "✅", title: "맞았는지 검증해요", desc: "하루를 보내고 맞았는지 O/X로 3초만 체크해요." },
-  { emoji: "📊", title: "적중률을 쌓아요", desc: "나에게 어떤 운이 잘 맞는지 매일 또렷해져요." },
-];
-
 export function OnboardingScreen() {
   const { reset } = useRouter();
   const { saveProfile } = useAppState();
@@ -270,23 +264,8 @@ export function OnboardingScreen() {
         </Button>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 20 }}>
-        {STEPS.map((s, i) => (
-          <Card key={s.title} style={{ display: "flex", alignItems: "center", gap: 14, padding: 16 }}>
-            <div style={{ fontSize: 30, lineHeight: 1 }}>{s.emoji}</div>
-            <div style={{ flex: 1 }}>
-              <Paragraph typography="t6" fontWeight="bold" color={palette.ink} style={{ marginBottom: 3 }}>
-                {i + 1}. {s.title}
-              </Paragraph>
-              <Paragraph typography="t7" color={palette.sub} style={{ lineHeight: 1.5 }}>
-                {s.desc}
-              </Paragraph>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <Paragraph typography="t7" color={palette.sub} style={{ margin: "14px 4px 0", lineHeight: 1.5 }}>
+      {/* 앱이 뭘 해주는지는 여기서 설명하지 않아요 — 첫 화면(홈)에서 코치마크로 짚어줘요. */}
+      <Paragraph typography="t7" color={palette.sub} style={{ margin: "20px 4px 0", lineHeight: 1.5 }}>
         생년월일·태어난 시간·성별은 사주·띠·별자리 계산에만 쓰이고 이 기기에만 저장돼요. 검증 결과는 이름·생년월일 없이 띠 단위 익명 집계로만 서버에 저장돼요. 모든 보상은 앱 내 가상 보상이에요.
       </Paragraph>
     </ScreenLayout>
