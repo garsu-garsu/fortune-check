@@ -12,17 +12,17 @@ export type NotifyConsent =
  * 코드를 바꾸면 콘솔의 발송 코드도 같이 바꿔야 알림 동의 화면이 떠요.
  */
 export const MORNING_SLOTS = [
-  { code: "fortune-check-am0700", label: "오전 7시" },
-  { code: "fortune-check-am0730", label: "오전 7시 30분" },
-  { code: "fortune-check-am0805", label: "오전 8시 5분" },
-  { code: "fortune-check-am0835", label: "오전 8시 35분" },
-  { code: "fortune-check-am0900", label: "오전 9시" },
+  { code: "fortune-check-am0700-p", label: "오전 7시" },
+  { code: "fortune-check-am0730-p", label: "오전 7시 30분" },
+  { code: "fortune-check-am0805-p", label: "오전 8시 5분" },
+  { code: "fortune-check-am0835-p", label: "오전 8시 35분" },
+  { code: "fortune-check-am0900-p", label: "오전 9시" },
 ] as const;
 
 export const NIGHT_SLOTS = [
-  { code: "fortune-check-pm2000", label: "오후 8시" },
-  { code: "fortune-check-pm2105", label: "오후 9시 5분" },
-  { code: "fortune-check-pm2200", label: "오후 10시" },
+  { code: "fortune-check-pm2000-p", label: "오후 8시" },
+  { code: "fortune-check-pm2105-p", label: "오후 9시 5분" },
+  { code: "fortune-check-pm2200-p", label: "오후 10시" },
 ] as const;
 
 export type NotifySlotCode =
@@ -30,9 +30,9 @@ export type NotifySlotCode =
   | (typeof NIGHT_SLOTS)[number]["code"];
 
 /** 온보딩에서 물어보는 기본 아침 알림 슬롯 (기존 단일 알림 코드와 동일). */
-export const DEFAULT_MORNING_CODE: NotifySlotCode = "fortune-check-am0900";
+export const DEFAULT_MORNING_CODE: NotifySlotCode = "fortune-check-am0900-p";
 /** 첫 검증 직후 재요청에 쓰는 기본 밤 알림 슬롯. */
-export const DEFAULT_NIGHT_CODE: NotifySlotCode = "fortune-check-pm2000";
+export const DEFAULT_NIGHT_CODE: NotifySlotCode = "fortune-check-pm2000-p";
 
 const AGREED_MORNING_KEY = "fc:notify-agreed-morning";
 const AGREED_NIGHT_KEY = "fc:notify-agreed-night";

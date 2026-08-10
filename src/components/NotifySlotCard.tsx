@@ -31,7 +31,12 @@ export function NotifySlotCard({ title, slots, agreedCode, onAgreed, where }: Pr
     setBusy(true);
     try {
       const result = await requestNotifyConsent(code);
-      if (result == null) return;
+      // 동의창 자체가 안 뜬 경우예요(브라우저이거나 발송 코드가 콘솔에 없을 때).
+      // 여기서 조용히 넘어가면 눌러도 아무 일이 없는 것처럼 보여요.
+      if (result == null) {
+        openToast("지금은 알림을 설정할 수 없어요.");
+        return;
+      }
       track(EVENT.notifyConsent, { result, where });
       if (result === "agreementRejected") return;
       onAgreed(code);
