@@ -300,7 +300,7 @@ export function StatsScreen() {
           </div>
         ))}
         {monthChecks.length === 0 && (
-          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
+          <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
             아직 검증 기록이 없어요. 오늘 운세를 확인하고 검증해 보세요.
           </Paragraph>
         )}
@@ -331,12 +331,12 @@ export function StatsScreen() {
                 </>
               )}
             </Paragraph>
-            <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
+            <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
               검증이 쌓일수록 더 또렷해져요.
             </Paragraph>
           </>
         ) : (
-          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
+          <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
             카테고리마다 {MIN_FOR_INSIGHT}번씩 검증하면 나에게 어떤 운이 잘 맞는지
             알려드려요. (지금 {allChecks.length}번)
           </Paragraph>
@@ -431,7 +431,7 @@ export function StatsScreen() {
           )}
         </div>
         {!live && (
-          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
+          <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
             아직 오늘 집계가 모이지 않았어요. 저녁에 다시 확인해 주세요.
           </Paragraph>
         )}

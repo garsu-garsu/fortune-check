@@ -46,7 +46,7 @@ const page = await ctx.newPage();
 await page.goto(BASE, { waitUntil: "networkidle" });
 await waitText(page, "운세·사주 팩트체크");
 await page.getByRole("button", { name: "말" }).first().click();
-await page.locator('input[type="date"]').fill("1996-05-20");
+await page.locator('input[inputmode="numeric"]').first().fill("19960520");
 await waitText(page, "자리"); // 별자리 미리보기가 떠야 입력 완료
 await page.mouse.wheel(0, -2000);
 await shot(page, "onboarding");

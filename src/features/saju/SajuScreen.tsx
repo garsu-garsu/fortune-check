@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 
 import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
+import { BirthDateField } from "../../components/BirthDateField";
+import { BirthHourField } from "../../components/BirthHourField";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import { Teaser } from "../../components/Teaser";
 import {
+  PILLAR_MEANING,
   flowOf,
   periodReading,
   pillarSummary,
@@ -12,10 +15,15 @@ import {
   type ReadingSection,
 } from "../../data/reading";
 import {
+  LIFE_STAGE_MEANING,
+  TEN_GOD_FULL_MEANING,
+  birthHourSlotOf,
   computeSaju,
   dayPillarOf,
   type Element,
   type Gender,
+  type LifeStage,
+  type TenGodFull,
 } from "../../data/saju";
 import { EVENT, track } from "../../lib/analytics";
 import { kstDate } from "../../lib/kst";
@@ -52,6 +60,8 @@ export function SajuScreen() {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
+  // 원국 표에서 지금 눌러본 기둥(년주/월주/…) — 한자만 보고는 뜻을 알 수 없어요.
+  const [pickedPillar, setPickedPillar] = useState<string | null>(null);
 
   // 내 오늘 일운을 열면 밤에 검증할 수 있게 문장을 고정해요.
   // 남의 사주는 내가 O/X로 판정할 수 없으니 본인일 때만이에요.
@@ -90,11 +100,16 @@ export function SajuScreen() {
     .filter((p): p is NonNullable<typeof p> => p != null);
 
   const maxCount = Math.max(...Object.values(saju.elementCount));
+  const picked = pillars.find((p) => p.label === pickedPillar);
 
   return (
     <ScreenLayout
       title={`${profile.name ? profile.name + "님의 " : "내 "}사주 풀이`}
-      subtitle={`${profile.birthDate.replace(/-/g, ".")}${profile.birthTime ? " " + profile.birthTime : " (시간 미입력)"}`}
+      subtitle={`${profile.birthDate.replace(/-/g, ".")}${
+        birthHourSlotOf(profile.birthTime)?.name
+          ? " " + birthHourSlotOf(profile.birthTime)!.name
+          : " (시간 미입력)"
+      }`}
     >
       {/* 사람 전환 */}
       <div
@@ -114,9 +129,9 @@ export function SajuScreen() {
               onClick={() => selectPerson(p.id)}
               style={{
                 flexShrink: 0,
-                padding: "7px 13px",
+                padding: "11px 15px",
                 borderRadius: 999,
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: 600,
                 cursor: "pointer",
                 border: `1px solid ${on ? palette.primary : palette.line}`,
@@ -133,9 +148,9 @@ export function SajuScreen() {
           onClick={() => setAdding(true)}
           style={{
             flexShrink: 0,
-            padding: "7px 13px",
+            padding: "11px 15px",
             borderRadius: 999,
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: 600,
             cursor: "pointer",
             border: `1px dashed ${palette.line}`,
@@ -208,7 +223,7 @@ export function SajuScreen() {
 
       {!isViewingSelf && (
         <Card style={{ marginTop: 10, background: palette.bg }}>
-          <Paragraph typography="t7" color={palette.sub} style={{ lineHeight: 1.5 }}>
+          <Paragraph typography="t6" color={palette.sub} style={{ lineHeight: 1.5 }}>
             다른 사람의 사주는 <b>보기 전용</b>이에요. 검증과 적중률은 내 것만 쌓여요.
           </Paragraph>
           <div style={{ marginTop: 10 }}>
@@ -250,7 +265,19 @@ export function SajuScreen() {
         </Paragraph>
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
           {pillars.map((p) => (
-            <div key={p.label} style={{ flex: 1, textAlign: "center" }}>
+            <button
+              key={p.label}
+              type="button"
+              onClick={() => setPickedPillar(p.label === pickedPillar ? null : p.label)}
+              style={{
+                flex: 1,
+                textAlign: "center",
+                border: "none",
+                background: "transparent",
+                padding: 0,
+                cursor: "pointer",
+              }}
+            >
               <Paragraph typography="t7" color={palette.sub}>
                 {p.label}
               </Paragraph>
@@ -259,10 +286,10 @@ export function SajuScreen() {
                   marginTop: 6,
                   padding: "12px 0",
                   borderRadius: 12,
-                  background: palette.bg,
+                  background: p.label === pickedPillar ? palette.primary : palette.bg,
                   fontSize: 22,
                   fontWeight: 700,
-                  color: palette.ink,
+                  color: p.label === pickedPillar ? palette.white : palette.ink,
                 }}
               >
                 {p.name}
@@ -273,15 +300,37 @@ export function SajuScreen() {
               <Paragraph typography="t7" color={palette.sub}>
                 {p.stage}
               </Paragraph>
-            </div>
+            </button>
           ))}
         </div>
         {/* 표 아래 두 줄이 무엇인지 어디에도 없었어요 — 이 화면의 대표 표인데
-            첫 사용자에겐 한자 나열로만 보였어요. */}
-        <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 12, lineHeight: 1.5 }}>
-          가운데 줄은 십성(사회에서 드러나는 역할), 아래 줄은 십이운성(그 자리 기운의
-          세기)이에요.
-        </Paragraph>
+            첫 사용자에겐 한자 나열로만 보였어요.
+            설명을 읽게 하는 대신 눌러서 보게 해요(온보딩 띠 고르기와 같은 방식). */}
+        {picked ? (
+          <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 12, background: palette.bg }}>
+            <Paragraph typography="t6" color={palette.ink} style={{ lineHeight: 1.6 }}>
+              <b>{picked.label}</b>는 {PILLAR_MEANING[picked.label]}예요.
+            </Paragraph>
+            <Paragraph typography="t6" color={palette.ink} style={{ marginTop: 6, lineHeight: 1.6 }}>
+              {picked.god.startsWith("일간") ? (
+                <>사주 전체의 기준이 되는 <b>나 자신</b>이고, </>
+              ) : (
+                <>
+                  드러나는 역할은 <b>{picked.god}</b>
+                  {TEN_GOD_FULL_MEANING[picked.god as TenGodFull]
+                    ? `(${TEN_GOD_FULL_MEANING[picked.god as TenGodFull]})`
+                    : ""}
+                  이고,{" "}
+                </>
+              )}
+              기운은 <b>{picked.stage}</b>({LIFE_STAGE_MEANING[picked.stage as LifeStage]})이에요.
+            </Paragraph>
+          </div>
+        ) : (
+          <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 12, lineHeight: 1.5 }}>
+            기둥을 눌러보세요 — 그 자리가 무슨 뜻인지 풀어드려요.
+          </Paragraph>
+        )}
         {!profile.birthTime && (
           <div style={{ marginTop: 12 }}>
             <Button display="full" variant="weak" onClick={() => setEditing(true)}>
@@ -377,7 +426,7 @@ export function SajuScreen() {
             </div>
           ))}
         </div>
-        <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
+        <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
           위에서 아래로 갈수록 짧은 흐름이에요. 사주에는 주(週) 단위가 없어서 대운·세운·월운·일운으로 봐요.
         </Paragraph>
       </Card>
@@ -456,7 +505,7 @@ export function SajuScreen() {
           </Paragraph>
           <Teaser text={reading.sections[1].body} />
           <Paragraph
-            typography="t7"
+            typography="t6"
             color={palette.sub}
             style={{ marginTop: 8, lineHeight: 1.5 }}
           >
@@ -480,7 +529,7 @@ export function SajuScreen() {
               📺 광고 보고 전체 풀이 보기
             </Button>
           </div>
-          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10 }}>
+          <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
             한 번 열면 이 사람 풀이는 계속 볼 수 있어요.
           </Paragraph>
         </Card>
@@ -519,7 +568,7 @@ export function SajuScreen() {
               </div>
             ))}
           </div>
-          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
+          <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
             10년마다 바뀌는 큰 흐름을 80년치로 봐요. 지금 어느 대운에 있는지도
             함께 알려드려요.
           </Paragraph>
@@ -579,7 +628,7 @@ export function SajuScreen() {
         </Card>
       ) : (
         <Card style={{ marginTop: 12 }}>
-          <Paragraph typography="t7" color={palette.sub} style={{ lineHeight: 1.6 }}>
+          <Paragraph typography="t6" color={palette.sub} style={{ lineHeight: 1.6 }}>
             대운은 10년마다 바뀌는 큰 흐름이에요. 남녀에 따라 흐르는 방향이 달라서,
             성별을 넣어야 볼 수 있어요.
           </Paragraph>
@@ -592,7 +641,7 @@ export function SajuScreen() {
       )}
 
       <Paragraph
-        typography="t7"
+        typography="t6"
         color={palette.sub}
         style={{ margin: "16px 4px 0", lineHeight: 1.5 }}
       >
@@ -600,7 +649,7 @@ export function SajuScreen() {
         만세력과는 시주가 한 칸 다를 수 있어요.
       </Paragraph>
       <Paragraph
-        typography="t7"
+        typography="t6"
         color={palette.sub}
         style={{ margin: "10px 4px 0", lineHeight: 1.5 }}
       >
@@ -676,7 +725,7 @@ function PeriodCard({
           <Teaser text={sections[0].body} />
         </>
       )}
-      <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
+      <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
         {hint}
       </Paragraph>
       <div style={{ marginTop: 12 }}>
@@ -684,7 +733,7 @@ function PeriodCard({
           📺 광고 보고 이어서 보기
         </Button>
       </div>
-      <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10 }}>
+      <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
         {note}
       </Paragraph>
     </Card>
@@ -744,23 +793,13 @@ function AddPersonCard({
         style={inputStyle}
       />
 
-      <label style={{ ...labelStyle, marginTop: 12 }}>생년월일</label>
-      <input
-        type="date"
-        value={birthDate}
-        max={kstDate()}
-        min="1930-01-01"
-        onChange={(e) => setBirthDate(e.target.value)}
-        style={inputStyle}
-      />
+      <div style={{ marginTop: 12 }}>
+        <BirthDateField value={birthDate} onChange={setBirthDate} />
+      </div>
 
-      <label style={{ ...labelStyle, marginTop: 12 }}>태어난 시간 (선택)</label>
-      <input
-        type="time"
-        value={birthTime}
-        onChange={(e) => setBirthTime(e.target.value)}
-        style={inputStyle}
-      />
+      <div style={{ marginTop: 12 }}>
+        <BirthHourField value={birthTime} onChange={setBirthTime} />
+      </div>
 
       <label style={{ ...labelStyle, marginTop: 12 }}>성별 (선택)</label>
       <div style={{ display: "flex", gap: 8 }}>
@@ -820,7 +859,7 @@ function AddPersonCard({
         </Button>
       </div>
       {!initial && (
-        <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
+        <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
           추가한 사람의 이름·생년월일·시간·성별은 이 기기에만 저장돼요. 본인 동의를 받고
           입력해 주세요. 언제든 삭제할 수 있어요.
         </Paragraph>
@@ -841,8 +880,6 @@ const labelStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
-  // date/time 은 내부 높이가 글자 입력과 달라서, 높이를 고정하지 않으면
-  // 필드마다 세로 크기가 어긋나 보여요.
   height: 48,
   padding: "12px 14px",
   borderRadius: 12,

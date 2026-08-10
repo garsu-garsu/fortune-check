@@ -95,6 +95,53 @@ export function koreaOffsetMinutes(date: string): number {
  */
 const TRUE_SOLAR_OFFSET_MIN = 32;
 
+/**
+ * 태어난 시간 고르기용 12시진 — 시계로 몇 시부터 몇 시까지인지 같이 줘요.
+ *
+ * 경계는 위 진태양시 보정만큼 밀려 있어요(자시가 23:00이 아니라 23:32 시작).
+ * 라벨을 손으로 적으면 보정값이 바뀔 때 계산과 어긋나니 여기서 만들어요.
+ * time 은 그 칸을 고른 사람에게 저장할 대표 시각(칸의 한가운데)이에요.
+ *
+ * 자시만 두 칸이에요. 자정을 넘나드는 칸이라 한 칸으로 두면 일주(사주의 중심)가
+ * 하루 어긋나요 — 자정 전후를 나눠 받으면 그 사람 날짜 그대로 맞아요.
+ */
+export interface BirthHourSlot {
+  branch: number;
+  name: string;
+  range: string;
+  /** 저장할 "HH:MM" (시계 기준) */
+  time: string;
+}
+
+export const BIRTH_HOUR_SLOTS: BirthHourSlot[] = (() => {
+  const hhmm = (min: number) => {
+    const m = ((min % 1440) + 1440) % 1440;
+    return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  };
+  const out: BirthHourSlot[] = [];
+  for (let b = 0; b < 12; b++) {
+    // 진태양시로 자시=23시, 축시=1시…에서 시작해 2시간씩이에요.
+    const start = (((2 * b + 23) % 24) * 60) + TRUE_SOLAR_OFFSET_MIN;
+    const name = `${BRANCHES[b]}시`;
+    if (b === 0) {
+      out.push({ branch: b, name: `${name}(밤)`, range: `${hhmm(start)}~23:59`, time: "23:45" });
+      out.push({ branch: b, name: `${name}(새벽)`, range: `00:00~${hhmm(start + 119)}`, time: "00:45" });
+    } else {
+      out.push({ branch: b, name, range: `${hhmm(start)}~${hhmm(start + 119)}`, time: hhmm(start + 60) });
+    }
+  }
+  return out;
+})();
+
+/** "HH:MM" 이 속한 시진 칸 — 저장값(06:32)이 아니라 고른 이름(묘시)으로 보여주려고요. */
+export function birthHourSlotOf(time?: string): BirthHourSlot | undefined {
+  if (!time) return undefined;
+  return BIRTH_HOUR_SLOTS.find((s) => {
+    const [from, to] = s.range.split("~");
+    return time >= from && time <= to;
+  });
+}
+
 function pillar(stem: number, branch: number): Pillar {
   return { stem, branch, name: STEMS[stem] + BRANCHES[branch] };
 }
@@ -358,6 +405,22 @@ export function lifeStageOf(stem: number, branch: number): LifeStage {
   const steps = ((((branch - LIFE_STAGE_START[stem]) * dir) % 12) + 12) % 12;
   return LIFE_STAGES[steps];
 }
+
+/** 십이운성을 한 마디로 — 화면에 한자만 나오면 무슨 말인지 알 수가 없어요. */
+export const LIFE_STAGE_MEANING: Record<LifeStage, string> = {
+  장생: "막 태어나 자라는 기운",
+  목욕: "아직 다듬어지는 중",
+  관대: "이제 막 자리를 잡는 패기",
+  건록: "제 몫을 하는 안정된 때",
+  제왕: "기운이 가장 왕성한 때",
+  쇠: "정점을 지나 한풀 꺾인 때",
+  병: "힘이 달리는 때",
+  사: "움직임이 멎은 고요한 때",
+  묘: "안으로 갈무리하는 때",
+  절: "끊기고 비워지는 때",
+  태: "새로 잉태되는 때",
+  양: "길러지며 준비하는 때",
+};
 
 /** 십이운성의 기운 세기 (0=바닥, 4=절정). 문장 톤을 정할 때 써요. */
 export const LIFE_STAGE_POWER: Record<LifeStage, number> = {

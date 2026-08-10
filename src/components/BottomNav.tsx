@@ -51,7 +51,7 @@ export function BottomNav() {
               {tab.emoji}
             </span>
             <Paragraph
-              typography="t7"
+              typography="t6"
               fontWeight={active ? "bold" : "medium"}
               color={active ? palette.primary : palette.sub}
             >

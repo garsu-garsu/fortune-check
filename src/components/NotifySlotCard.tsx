@@ -57,7 +57,7 @@ export function NotifySlotCard({ title, slots, agreedCode, onAgreed, where }: Pr
         {slots.map((slot) => (
           <Button
             key={slot.code}
-            size="medium"
+            size="large"
             display="block"
             variant={agreedCode === slot.code ? "fill" : "weak"}
             color={agreedCode === slot.code ? "primary" : "dark"}

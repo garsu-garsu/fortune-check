@@ -16,7 +16,9 @@
     "check:repeat": "node --experimental-strip-types scripts/repeat-check.ts",
     "check:teaser": "node --experimental-strip-types scripts/teaser-check.ts",
     "check:preview": "node --experimental-strip-types scripts/preview-check.ts",
-    "check:state": "node --experimental-strip-types scripts/state-check.ts"
+    "check:state": "node --experimental-strip-types scripts/state-check.ts",
+    "check:birthdate": "node --experimental-strip-types scripts/birthdate-check.ts",
+    "check:hourslot": "node --experimental-strip-types scripts/hourslot-check.ts"
   },
   "dependencies": {
     "@apps-in-toss/web-framework": "^3.0.2",

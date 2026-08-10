@@ -206,7 +206,7 @@ export function HomeScreen() {
               </Button>
             </div>
             <Paragraph
-              typography="t7"
+              typography="t6"
               color={palette.sub}
               style={{ marginTop: 8, lineHeight: 1.5 }}
             >
@@ -299,7 +299,7 @@ export function HomeScreen() {
           <b>{overall.tenGod}</b>({TEN_GOD_MEANING[overall.tenGod]})의 날이에요.
         </Paragraph>
         {!profile.birthTime && (
-          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 8 }}>
+          <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 8, lineHeight: 1.5 }}>
             태어난 시간을 넣으면 시주까지 봐요.
           </Paragraph>
         )}
@@ -314,7 +314,7 @@ export function HomeScreen() {
           <Paragraph typography="t6" fontWeight="bold" color={palette.ink}>
             맞았는지 검증해요 ✅
           </Paragraph>
-          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 6, lineHeight: 1.5 }}>
+          <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 6, lineHeight: 1.5 }}>
             오늘 확인한 운세가 맞았는지 O/X로 체크하면 적중률이 쌓여요. 지금 바로 해도 돼요.
           </Paragraph>
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>

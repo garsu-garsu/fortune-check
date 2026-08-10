@@ -469,6 +469,14 @@ export function pillarSummary(
   };
 }
 
+/** 네 기둥이 각각 인생의 어느 자리인지 — 년주·월주 같은 말만으론 안 통해요. */
+export const PILLAR_MEANING: Record<string, string> = {
+  년주: "조상과 어린 시절 자리",
+  월주: "부모와 사회생활 자리",
+  일주: "나와 배우자 자리",
+  시주: "자식과 말년 자리",
+};
+
 /** 천간이 양인지 — 표에서 음양 표시용 */
 export function stemPolarity(stem: number): "양" | "음" {
   return isYangStem(stem) ? "양" : "음";

@@ -2,6 +2,8 @@ import { useRef, useState } from "react";
 
 import { Button, Paragraph, useToast } from "@toss/tds-mobile";
 
+import { BirthDateField } from "../../components/BirthDateField";
+import { BirthHourField } from "../../components/BirthHourField";
 import { Card, ScreenLayout } from "../../components/ScreenLayout";
 import { DEFAULT_MORNING_CODE, requestNotifyConsent } from "../../data/notify";
 import { ELEMENT_TRAIT } from "../../data/reading";
@@ -144,21 +146,21 @@ export function OnboardingScreen() {
         </div>
 
         {pickedZodiac == null || pickedGod == null ? (
-          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
+          <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 10, lineHeight: 1.5 }}>
             이건 오늘 모두에게 같은 일진이에요. 내 사주에 어떻게 작용하는지는 생년월일을 넣어야 볼 수 있어요.
           </Paragraph>
         ) : (
           <div style={{ marginTop: 10 }}>
-            <Paragraph typography="t7" color={palette.ink} style={{ lineHeight: 1.5 }}>
+            <Paragraph typography="t6" color={palette.ink} style={{ lineHeight: 1.5 }}>
               {ZODIAC_PICK[pickedZodiac].emoji} {ZODIAC_PICK[pickedZodiac].name}띠는 오늘{" "}
               <b>{pickedGod}</b>({TEN_GOD_MEANING[pickedGod]})의 기운과 만나요.
             </Paragraph>
             {pickedBonus && (
-              <Paragraph typography="t7" color={palette.ink} style={{ marginTop: 4, lineHeight: 1.5 }}>
+              <Paragraph typography="t6" color={palette.ink} style={{ marginTop: 4, lineHeight: 1.5 }}>
                 {pickedBonus}
               </Paragraph>
             )}
-            <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 4, lineHeight: 1.5 }}>
+            <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 4, lineHeight: 1.5 }}>
               이건 태어난 해 하나로만 본 거예요. 생년월일을 넣으면 네 기둥 전부로 봐요.
             </Paragraph>
           </div>
@@ -166,20 +168,15 @@ export function OnboardingScreen() {
       </Card>
 
       <Card style={{ marginTop: 12 }}>
-        <label style={labelStyle}>생년월일</label>
-        <input
-          type="date"
+        <BirthDateField
           value={birthDate}
-          max={kstDate()}
-          min="1930-01-01"
-          onChange={(e) => {
+          onChange={(iso) => {
             if (!startedRef.current) {
               startedRef.current = true;
               track(EVENT.onboardingStarted, {});
             }
-            setBirthDate(e.target.value);
+            setBirthDate(iso);
           }}
-          style={inputStyle}
         />
 
         {preview && (
@@ -198,6 +195,34 @@ export function OnboardingScreen() {
           </div>
         )}
 
+        {/* 대운(10년 주기)은 양남·음녀 순행 / 음남·양녀 역행이라 성별이 있어야 계산돼요.
+            접어두면 대부분 안 넣고 지나가서 10년 흐름을 아예 못 보여줬어요. */}
+        <label style={{ ...labelStyle, marginTop: 16 }}>
+          성별 (10년 단위 큰 흐름을 보려면 필요해요)
+        </label>
+        <div style={{ display: "flex", gap: 8 }}>
+          {(["남", "여"] as const).map((g) => (
+            <button
+              key={g}
+              type="button"
+              onClick={() => setGender(gender === g ? undefined : g)}
+              style={{
+                flex: 1,
+                padding: "14px 0",
+                borderRadius: 12,
+                fontSize: 16,
+                fontWeight: 600,
+                cursor: "pointer",
+                border: `1px solid ${gender === g ? palette.primary : palette.line}`,
+                background: gender === g ? palette.primary : "#FBFAFF",
+                color: gender === g ? palette.white : palette.sub,
+              }}
+            >
+              {g}
+            </button>
+          ))}
+        </div>
+
         <button
           type="button"
           onClick={() => setShowOptional((v) => !v)}
@@ -205,45 +230,12 @@ export function OnboardingScreen() {
         >
           {showOptional
             ? "선택 입력 접기"
-            : "태어난 시간·성별·닉네임 넣기 (선택)"}
+            : "태어난 시간·닉네임 넣기 (선택)"}
         </button>
 
         {showOptional && (
           <>
-            <label style={labelStyle}>태어난 시간</label>
-            <input
-              type="time"
-              value={birthTime}
-              onChange={(e) => setBirthTime(e.target.value)}
-              style={inputStyle}
-            />
-
-            {/* 대운(10년 주기)은 양남·음녀 순행 / 음남·양녀 역행이라 성별이 있어야 계산돼요 */}
-            <label style={{ ...labelStyle, marginTop: 12 }}>
-              성별 (대운 계산에 필요)
-            </label>
-            <div style={{ display: "flex", gap: 8 }}>
-              {(["남", "여"] as const).map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => setGender(gender === g ? undefined : g)}
-                  style={{
-                    flex: 1,
-                    padding: "12px 0",
-                    borderRadius: 12,
-                    fontSize: 15,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    border: `1px solid ${gender === g ? palette.primary : palette.line}`,
-                    background: gender === g ? palette.primary : "#FBFAFF",
-                    color: gender === g ? palette.white : palette.sub,
-                  }}
-                >
-                  {g}
-                </button>
-              ))}
-            </div>
+            <BirthHourField value={birthTime} onChange={setBirthTime} />
 
             <label style={{ ...labelStyle, marginTop: 12 }}>닉네임</label>
             <input
@@ -265,7 +257,7 @@ export function OnboardingScreen() {
       </div>
 
       {/* 앱이 뭘 해주는지는 여기서 설명하지 않아요 — 첫 화면(홈)에서 코치마크로 짚어줘요. */}
-      <Paragraph typography="t7" color={palette.sub} style={{ margin: "20px 4px 0", lineHeight: 1.5 }}>
+      <Paragraph typography="t6" color={palette.sub} style={{ margin: "20px 4px 0", lineHeight: 1.5 }}>
         생년월일·태어난 시간·성별은 사주·띠·별자리 계산에만 쓰이고 이 기기에만 저장돼요. 검증 결과는 이름·생년월일 없이 띠 단위 익명 집계로만 서버에 저장돼요. 모든 보상은 앱 내 가상 보상이에요.
       </Paragraph>
     </ScreenLayout>
@@ -297,8 +289,6 @@ const toggleStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
-  // date/time 은 내부 높이가 글자 입력과 달라서, 높이를 고정하지 않으면
-  // 필드마다 세로 크기가 어긋나 보여요.
   height: 48,
   padding: "12px 14px",
   borderRadius: 12,

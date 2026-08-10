@@ -156,14 +156,6 @@ export function VerifyScreen() {
         </div>
       </Card>
 
-      <NotifySlotCard
-        title="밤 검증 알림, 몇 시에 받을까요?"
-        slots={NIGHT_SLOTS}
-        agreedCode={agreedNight}
-        onAgreed={setAgreedNight}
-        where="verify"
-      />
-
       {/* 운세와 사주는 검증하는 대상이 달라서 세그먼트로 나눠요.
           적중률·연속기록은 하나로 유지돼요(둘로 나누면 둘 다 약해져요). */}
       <div
@@ -186,11 +178,11 @@ export function VerifyScreen() {
               onClick={() => setKind(k)}
               style={{
                 flex: 1,
-                padding: "9px 0",
+                padding: "13px 0",
                 borderRadius: 9,
                 border: "none",
                 cursor: "pointer",
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 700,
                 background: on ? palette.white : "transparent",
                 color: on ? palette.primary : palette.sub,
@@ -211,7 +203,7 @@ export function VerifyScreen() {
               ? "아직 확인한 운세가 없어요"
               : "아직 오늘 일운을 안 열었어요"}
           </Paragraph>
-          <Paragraph typography="t7" color={palette.sub} style={{ marginTop: 6, lineHeight: 1.5 }}>
+          <Paragraph typography="t6" color={palette.sub} style={{ marginTop: 6, lineHeight: 1.5 }}>
             {kind === "운세"
               ? "오늘 운세를 먼저 확인하면 검증할 수 있어요. (확인한 운세만 검증돼요)"
               : "사주 탭에서 오늘 일운 풀이를 열면 맞았는지 검증할 수 있어요."}
@@ -290,6 +282,16 @@ export function VerifyScreen() {
           );
         })
       )}
+
+      {/* 알림 설정은 O/X 아래로 — 검증하러 온 사람 앞을 막지 않아요.
+          동의를 묻기도 검증을 끝낸 뒤가 나아요(만족도가 가장 높은 순간). */}
+      <NotifySlotCard
+        title="밤 검증 알림, 몇 시에 받을까요?"
+        slots={NIGHT_SLOTS}
+        agreedCode={agreedNight}
+        onAgreed={setAgreedNight}
+        where="verify"
+      />
 
       {allDone && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
