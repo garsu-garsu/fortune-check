@@ -17,6 +17,7 @@ export function track(
   params: Params = {},
   type: LogType = "event",
 ): void {
+  if (!name) return; // 이름 없는 로그가 콘솔 카탈로그를 오염시켜요.
   try {
     // 유입 캠페인을 모든 이벤트에 붙여 캠페인별 리텐션·광고수익을 나눠 봐요.
     void eventLog({
